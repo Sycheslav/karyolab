@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Beaker, Info, AlertTriangle } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { formatStainHistoryShort, useStore } from "@/lib/store";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -10,7 +10,7 @@ import SectionTitle from "@/components/ui/SectionTitle";
 import Badge from "@/components/ui/Badge";
 import ProbeSelector from "./ProbeSelector";
 import type { ProbeChannel } from "@/lib/types";
-import { classNames } from "@/lib/utils";
+import { classNames, defaultBatchName, isoDay } from "@/lib/utils";
 
 interface Props {
   defaultDate?: string;
@@ -21,6 +21,8 @@ export default function HybridizationForm({ defaultDate }: Props) {
   const [params] = useSearchParams();
   const addEvent = useStore((s) => s.addEvent);
   const preps = useStore((s) => s.preparations);
+  const stained = useStore((s) => s.stained);
+  const events = useStore((s) => s.events);
 
   // Допустимые препараты: «предгибридизационно отмыт» или «готов к
   // повторной гибридизации». 04_ивенты.md / 06_экраны.
@@ -36,13 +38,19 @@ export default function HybridizationForm({ defaultDate }: Props) {
   );
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [batchName, setBatchName] = useState(
-    `HYB-${new Date().getFullYear()}-${String(
-      new Date().getMonth() + 1
-    ).padStart(2, "0")}-A`
-  );
   const [date, setDate] = useState(
     defaultDate ?? new Date().toISOString().slice(0, 10)
+  );
+  // Дефолт `HYB-{YYYY-MM-DD}` (правка 14).
+  const sameDayCount = useMemo(
+    () =>
+      events.filter(
+        (e) => e.type === "hybridization" && isoDay(e.startDate) === date
+      ).length,
+    [events, date]
+  );
+  const [batchName, setBatchName] = useState(() =>
+    defaultBatchName("hybridization", date, sameDayCount)
   );
   const [probes, setProbes] = useState<{ name: string; channel: ProbeChannel }[]>(
     []
@@ -142,7 +150,7 @@ export default function HybridizationForm({ defaultDate }: Props) {
                     След. окраска
                   </th>
                   <th className="px-3 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wider">
-                    Статус
+                    История отмывок и зондов
                   </th>
                 </tr>
               </thead>
@@ -151,11 +159,17 @@ export default function HybridizationForm({ defaultDate }: Props) {
                   const nextCycle = (p.stainCycle ?? 0) + 1;
                   const isLast = nextCycle === 3;
                   const isFromHyb = p.status === "rehyb_ready";
+                  // Заказчик: для «отмыт от гибридизации» показываем
+                  // компактную историю `1-GAA.pAs1.pAs119` …  (правка 16).
+                  const history = stained
+                    .filter((s) => s.preparationId === p.id)
+                    .sort((a, b) => a.cycleNumber - b.cycleNumber);
+                  const historyText = formatStainHistoryShort(history, "\n");
                   return (
                     <tr
                       key={p.id}
                       className={classNames(
-                        "border-t border-brand-line transition",
+                        "border-t border-brand-line align-top transition",
                         selected[p.id]
                           ? "bg-brand-cream/60"
                           : "bg-white hover:bg-brand-mint/40"
@@ -183,9 +197,17 @@ export default function HybridizationForm({ defaultDate }: Props) {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5">
-                        <Badge tone={isFromHyb ? "blue" : "mint"}>
-                          {isFromHyb ? "Отмыт от гибридизации" : "Первично отмыт"}
-                        </Badge>
+                        {isFromHyb && historyText ? (
+                          <pre className="whitespace-pre-wrap font-mono text-[11.5px] leading-relaxed text-brand-deep">
+                            {historyText}
+                          </pre>
+                        ) : (
+                          <Badge tone={isFromHyb ? "blue" : "mint"}>
+                            {isFromHyb
+                              ? "Отмыт от гибридизации"
+                              : "Первично отмыт"}
+                          </Badge>
+                        )}
                       </td>
                     </tr>
                   );

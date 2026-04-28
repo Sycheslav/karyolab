@@ -1,16 +1,29 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useStore } from "@/lib/store";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import SectionTitle from "@/components/ui/SectionTitle";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
+import SampleAutocomplete from "./SampleAutocomplete";
 import { Beaker, BookText, Dna, Info } from "lucide-react";
 import { classNames } from "@/lib/utils";
+
+const GENERATION_SUGGESTIONS = [
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "BC1",
+  "BC2",
+  "BC3",
+];
 
 export default function SampleForm() {
   const nav = useNavigate();
@@ -24,8 +37,19 @@ export default function SampleForm() {
   const [father, setFather] = useState("");
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [generation, setGeneration] = useState("");
+  const [genOpen, setGenOpen] = useState(false);
+  const generationWrapRef = useRef<HTMLDivElement | null>(null);
   const [notes, setNotes] = useState("");
   const [conflict, setConflict] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!genOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!generationWrapRef.current?.contains(e.target as Node)) setGenOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [genOpen]);
 
   function checkAndCreate(asDraft = false) {
     const trimmed = id.trim();
@@ -151,17 +175,23 @@ export default function SampleForm() {
         <Card>
           <SectionTitle icon={<Beaker size={16} />} title="Происхождение" />
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Мать"
-              placeholder="ID или имя матери"
+            {/*
+              Заказчик: «Мать» и «Отец» — это образцы (правка 6.2). Если такого
+              ID нет — создаётся пустой образец-черновик.
+            */}
+            <SampleAutocomplete
+              label="Мать (образец)"
+              placeholder="ID матери, начните вводить…"
               value={mother}
-              onChange={(e) => setMother(e.target.value)}
+              onChange={setMother}
+              excludeIds={id ? [id.trim()] : []}
             />
-            <Input
-              label="Отец"
-              placeholder="ID или имя отца"
+            <SampleAutocomplete
+              label="Отец (образец)"
+              placeholder="ID отца, начните вводить…"
               value={father}
-              onChange={(e) => setFather(e.target.value)}
+              onChange={setFather}
+              excludeIds={id ? [id.trim()] : []}
             />
             <Input
               label="Год посева / получения"
@@ -170,18 +200,52 @@ export default function SampleForm() {
               onChange={(e) => setYear(e.target.value)}
               inputMode="numeric"
             />
-            <Select
-              label="Поколение"
-              value={generation}
-              onChange={(e) => setGeneration(e.target.value)}
-            >
-              <option value="">—</option>
-              {["F1", "F2", "F3", "F4", "BC1", "BC2"].map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </Select>
+            {/*
+              Заказчик: «Поколение» — свободный ввод (`F7`, `BC3` и т. п.) +
+              комбобокс с подсказками (правка 6.1).
+            */}
+            <div ref={generationWrapRef} className="relative block w-full">
+              <span className="label-cap mb-1.5 block">Поколение</span>
+              <span className="field flex items-center gap-2 px-3.5 py-2.5">
+                <input
+                  value={generation}
+                  onChange={(e) => {
+                    setGeneration(e.target.value);
+                    setGenOpen(true);
+                  }}
+                  onFocus={() => setGenOpen(true)}
+                  placeholder="например, F7 или BC3"
+                  className="w-full bg-transparent text-sm text-brand-deep outline-none placeholder:text-brand-muted/70"
+                />
+              </span>
+              {genOpen && (
+                <div className="absolute left-0 right-0 z-30 mt-1 max-h-48 overflow-y-auto rounded-xl border border-brand-line bg-white shadow-soft">
+                  <div className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-brand-muted">
+                    Подсказки
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 p-1.5">
+                    {GENERATION_SUGGESTIONS.map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => {
+                          setGeneration(g);
+                          setGenOpen(false);
+                        }}
+                        className={classNames(
+                          "rounded-md border px-2 py-1 text-[12px] font-semibold transition",
+                          generation === g
+                            ? "border-brand-deep bg-brand-deep text-brand-cream"
+                            : "border-brand-line bg-white text-brand-deep hover:bg-brand-mint"
+                        )}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </Card>
 

@@ -166,49 +166,56 @@ export const initialSamples: Sample[] = [
 
 export const initialPlants: Plant[] = [
   {
-    id: "P1-1818.25",
+    id: "1818.25.1",
     sampleId: "1818.25",
     name: "Растение Альфа-1",
     location: "Теплица A · Лоток 04",
     state: "used",
   },
   {
-    id: "P2-1818.25",
+    id: "1818.25.2",
     sampleId: "1818.25",
     name: "Растение Гамма-Бета",
     location: "Камера C · Полка 2",
     state: "growing",
   },
   {
-    id: "P1-1988.55",
+    id: "1988.55.1",
     sampleId: "1988.55",
     name: "Растение 1988-A",
     location: "Теплица B · Лоток 01",
     state: "used",
   },
   {
-    id: "P1-2011.04",
+    id: "2011.04.1",
     sampleId: "2011.04",
     name: "Растение 2011-A",
     location: "Теплица A · Лоток 02",
     state: "used",
   },
   {
-    id: "P1-2234.12",
+    id: "2234.12.1",
     sampleId: "2234.12",
     name: "Растение 2234-A",
     location: "Теплица B · Лоток 03",
     state: "used",
   },
   {
-    id: "P1-1730.25",
+    id: "2045.66.1",
+    sampleId: "2045.66",
+    name: "Растение 2045-A",
+    location: "Теплица A · Лоток 05",
+    state: "used",
+  },
+  {
+    id: "1730.25.1",
     sampleId: "1730.25",
     name: "Растение 1730-A",
     location: "Теплица A · Лоток 07",
     state: "used",
   },
   {
-    id: "P1-1772.01",
+    id: "1772.01.1",
     sampleId: "1772.01",
     name: "Растение 1772-A",
     location: "Теплица B · Лоток 06",
@@ -222,9 +229,9 @@ export const initialPlants: Plant[] = [
 
 export const initialPreparations: Preparation[] = [
   {
-    id: "SLD-1818-A",
+    id: "1818.25.1.1",
     sampleId: "1818.25",
-    source: { kind: "plant", plantId: "P1-1818.25" },
+    source: { kind: "plant", plantId: "1818.25.1" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-15`,
     quality: "high",
     status: "created",
@@ -234,9 +241,9 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-1818-B",
+    id: "1818.25.1.2",
     sampleId: "1818.25",
-    source: { kind: "plant", plantId: "P1-1818.25" },
+    source: { kind: "plant", plantId: "1818.25.1" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-15`,
     quality: "high",
     status: "created",
@@ -245,7 +252,7 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-1818-MIX",
+    id: "1818.25.0.1",
     sampleId: "1818.25",
     source: { kind: "mix" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-15`,
@@ -257,9 +264,9 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-2011-A",
+    id: "2011.04.1.1",
     sampleId: "2011.04",
-    source: { kind: "plant", plantId: "P1-2011.04" },
+    source: { kind: "plant", plantId: "2011.04.1" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-09`,
     quality: "medium",
     status: "pre_washed",
@@ -268,9 +275,9 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-2011-B",
+    id: "2011.04.1.2",
     sampleId: "2011.04",
-    source: { kind: "plant", plantId: "P1-2011.04" },
+    source: { kind: "plant", plantId: "2011.04.1" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-09`,
     quality: "high",
     status: "pre_washed",
@@ -279,9 +286,9 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-1988-A",
+    id: "1988.55.1.1",
     sampleId: "1988.55",
-    source: { kind: "plant", plantId: "P1-1988.55" },
+    source: { kind: "plant", plantId: "1988.55.1" },
     createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-09`,
     quality: "high",
     status: "hybridized",
@@ -290,10 +297,10 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 0,
   },
   {
-    id: "SLD-2234-A",
+    id: "2234.12.1.1",
     sampleId: "2234.12",
-    source: { kind: "plant", plantId: "P1-2234.12" },
-    createdAt: `${yyyy}-${String(mm).padStart(2, "0") }-02`,
+    source: { kind: "plant", plantId: "2234.12.1" },
+    createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-02`,
     quality: "high",
     status: "rehyb_ready",
     fridge: "F-03",
@@ -302,9 +309,9 @@ export const initialPreparations: Preparation[] = [
     comment: "Готов к повторной гибридизации.",
   },
   {
-    id: "SLD-2045-A",
+    id: "2045.66.1.1",
     sampleId: "2045.66",
-    source: { kind: "plant", plantId: "P1-2234.12" },
+    source: { kind: "plant", plantId: "2045.66.1" },
     createdAt: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-25`,
     quality: "medium",
     status: "photographed",
@@ -313,9 +320,9 @@ export const initialPreparations: Preparation[] = [
     stainCycle: 1,
   },
   {
-    id: "SLD-1730-A",
+    id: "1730.25.1.1",
     sampleId: "1730.25",
-    source: { kind: "plant", plantId: "P1-1730.25" },
+    source: { kind: "plant", plantId: "1730.25.1" },
     createdAt: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-12`,
     quality: "high",
     status: "photographed",
@@ -325,9 +332,9 @@ export const initialPreparations: Preparation[] = [
     comment: "Готов к разметке кариотипа.",
   },
   {
-    id: "SLD-1772-A",
+    id: "1772.01.1.1",
     sampleId: "1772.01",
-    source: { kind: "plant", plantId: "P1-1772.01" },
+    source: { kind: "plant", plantId: "1772.01.1" },
     createdAt: `${yyyy - 1}-10-22`,
     quality: "high",
     status: "photographed",
@@ -344,8 +351,8 @@ export const initialPreparations: Preparation[] = [
 
 export const initialStained: StainedPreparation[] = [
   {
-    id: "STN-1988-A-1",
-    preparationId: "SLD-1988-A",
+    id: "1988.55.1.1.1",
+    preparationId: "1988.55.1.1",
     cycleNumber: 1,
     probes: [
       { name: "pAs1", channel: "red" },
@@ -356,20 +363,21 @@ export const initialStained: StainedPreparation[] = [
     status: "created",
   },
   {
-    id: "STN-2234-A-1",
-    preparationId: "SLD-2234-A",
+    id: "2234.12.1.1.1",
+    preparationId: "2234.12.1.1",
     cycleNumber: 1,
     probes: [
+      { name: "GAA", channel: "green" },
+      { name: "pAs1", channel: "red" },
       { name: "pAs119", channel: "red" },
-      { name: "DAPI", channel: "blue" },
     ],
     hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-15`,
     status: "closed_wash",
     fate: "washed",
   },
   {
-    id: "STN-2045-A-1",
-    preparationId: "SLD-2045-A",
+    id: "2045.66.1.1.1",
+    preparationId: "2045.66.1.1",
     cycleNumber: 1,
     probes: [
       { name: "pAs1", channel: "red" },
@@ -379,8 +387,8 @@ export const initialStained: StainedPreparation[] = [
     status: "photographed",
   },
   {
-    id: "STN-1730-A-1",
-    preparationId: "SLD-1730-A",
+    id: "1730.25.1.1.1",
+    preparationId: "1730.25.1.1",
     cycleNumber: 1,
     probes: [
       { name: "GAA", channel: "green" },
@@ -391,8 +399,8 @@ export const initialStained: StainedPreparation[] = [
     status: "photographed",
   },
   {
-    id: "STN-1772-A-1",
-    preparationId: "SLD-1772-A",
+    id: "1772.01.1.1.1",
+    preparationId: "1772.01.1.1",
     cycleNumber: 1,
     probes: [
       { name: "pAs1", channel: "red" },
@@ -447,7 +455,7 @@ export const initialEvents: JournalEvent[] = [
     id: "EV-WASH-009",
     type: "wash",
     title: `Предгибридизационная отмывка · Партия WP-${yyyy}-${String(mm).padStart(2, "0")}-09`,
-    preparationIds: ["SLD-2011-A", "SLD-2011-B"],
+    preparationIds: ["2011.04.1.1", "2011.04.1.2"],
     newFridge: "F-04",
     newBox: "BX-22",
     protocolNotes: "Стандартный 3xSSC при 42°C, 2 цикла по 5 минут.",
@@ -462,7 +470,7 @@ export const initialEvents: JournalEvent[] = [
     type: "hybridization",
     title: `Гибридизация · Партия HYB-${yyyy}-${String(mm).padStart(2, "0")}-11`,
     batchName: `HYB-${yyyy}-${String(mm).padStart(2, "0")}-11`,
-    preparationIds: ["SLD-1988-A"],
+    preparationIds: ["1988.55.1.1"],
     probes: [
       { name: "pAs1", channel: "red" },
       { name: "GAA", channel: "green" },
@@ -481,7 +489,7 @@ export const initialEvents: JournalEvent[] = [
     title: `Фотографирование · Сессия ${yyyy}-${String(mm).padStart(2, "0")}`,
     stainedDecisions: [
       {
-        stainedId: "STN-2234-A-1",
+        stainedId: "2234.12.1.1.1",
         fate: "washed",
         newFridge: "F-04",
         newBox: "BX-22",
@@ -499,11 +507,11 @@ export const initialEvents: JournalEvent[] = [
     type: "slide",
     title: "Создание препарата · Растение Альфа-1",
     sampleId: "1818.25",
-    source: { kind: "plant", plantId: "P1-1818.25" },
+    source: { kind: "plant", plantId: "1818.25.1" },
     quality: "high",
     storageJar: "Банка 12",
     storageFridge: "Холодильник A",
-    preparationIds: ["SLD-1818-A", "SLD-1818-B"],
+    preparationIds: ["1818.25.1.1", "1818.25.1.2"],
     startDate: M(15, "13:00"),
     operator: "Лаборант",
     status: "completed",
@@ -518,7 +526,7 @@ export const initialEvents: JournalEvent[] = [
     quality: "medium",
     storageJar: "Банка 12",
     storageFridge: "Холодильник A",
-    preparationIds: ["SLD-1818-MIX"],
+    preparationIds: ["1818.25.0.1"],
     startDate: M(15, "14:00"),
     operator: "Лаборант",
     status: "completed",
@@ -551,8 +559,26 @@ export const initialEvents: JournalEvent[] = [
     startDate: `${TODAY_ISO}T11:30:00`,
     status: "active",
     operator: "Лаборант",
+    tags: ["наблюдение", "проращивание"],
     createdAt: `${TODAY_ISO}T11:30:00`,
   } as FreeEvent,
+  // Демо-стак: ещё один slide-ивент в тот же день, чтобы виден был
+  // агрегатор «Создание препарата · N шт.» (правка 2).
+  {
+    id: "EV-SLIDE-017",
+    type: "slide",
+    title: "Создание препарата · Растение Альфа-1 (вторая партия)",
+    sampleId: "1818.25",
+    source: { kind: "plant", plantId: "1818.25.1" },
+    quality: "medium",
+    storageJar: "Банка 12",
+    storageFridge: "Холодильник A",
+    preparationIds: [],
+    startDate: M(15, "16:00"),
+    operator: "Лаборант",
+    status: "completed",
+    createdAt: M(15, "16:00"),
+  } as SlideEvent,
 ];
 
 /* ------------------------------------------------------------------ */
@@ -671,13 +697,16 @@ function makeChromosomeBatch(
   for (let i = 0; i < count; i++) {
     const seed = baseSeed + i * 7;
     const sizePx = 90 + (seed % 90); // 90..180
+    // Слой PSD — служебный объект (имя из исходного файла), id остаётся синтетическим.
     const layerId = `LYR-${metaphaseId}-${String(i + 1).padStart(2, "0")}`;
-    const chromId = `CHR-${metaphaseId}-${String(i + 1).padStart(2, "0")}`;
+    // Канонический id хромосомы: `<metaphase>.cNN`.
+    const tempName = `${metaphaseId}.c${String(i + 1).padStart(2, "0")}`;
+    const chromId = tempName;
     layers.push({
       id: layerId,
       importId,
       name: `untitled${i + 1}`,
-      temporaryName: `untitled${i + 1}`,
+      temporaryName: tempName,
       kind: "chromosome",
       included: true,
       maskSizePx: sizePx,
@@ -691,7 +720,7 @@ function makeChromosomeBatch(
       stainedId,
       sourceLayerId: layerId,
       importId,
-      temporaryName: `untitled${i + 1}`,
+      temporaryName: tempName,
       maskSizePx: sizePx,
       imageSeed: seed,
       bodyHue: 200 + (seed % 30),
@@ -709,8 +738,8 @@ function makeChromosomeBatch(
 const IMPORT_1730: KaryotypeImport = {
   id: "KIM-1730",
   sampleId: "1730.25",
-  preparationId: "SLD-1730-A",
-  stainedId: "STN-1730-A-1",
+  preparationId: "1730.25.1.1",
+  stainedId: "1730.25.1.1.1",
   psdFileName: "1730.25-GAA+pAs119+pAs1-21-112.14.psd",
   parsedSampleId: "1730.25",
   parsedProbes: ["GAA", "pAs119", "pAs1"],
@@ -724,7 +753,7 @@ const IMPORT_1730: KaryotypeImport = {
       id: "h1",
       ts: KAR_DATE_FULL,
       label: "Импорт открыт",
-      detail: "Активный выбор: S-1730.25 · STN-1730-A-1",
+      detail: "Активный выбор: S-1730.25 · 1730.25.1.1.1",
       level: "info",
     },
   ],
@@ -733,12 +762,12 @@ const IMPORT_1730: KaryotypeImport = {
 
 /* ----- 2045.66: committed импорт с 10 хромосомами ----- */
 
-const META_2045 = "MET-2045-1";
+const META_2045 = "2045.66.1.1.1.m1";
 const IMPORT_2045_ID = "KIM-2045";
 const batch2045 = makeChromosomeBatch(
   META_2045,
   "2045.66",
-  "STN-2045-A-1",
+  "2045.66.1.1.1",
   IMPORT_2045_ID,
   10,
   31
@@ -748,7 +777,7 @@ const IDEOGRAMS_2045: Ideogram[] = batch2045.chromosomes
   .slice(0, 4)
   .map((c, idx): Ideogram => {
     const idg: Ideogram = {
-      id: `IDG-${c.id}`,
+      id: `${c.id}.idg`,
       chromosomeId: c.id,
       lengthPx: c.maskSizePx,
       centromere: 0.32 + idx * 0.06,
@@ -795,7 +824,7 @@ const IDEOGRAMS_2045: Ideogram[] = batch2045.chromosomes
   });
 batch2045.chromosomes.forEach((c, idx) => {
   if (idx < 4) {
-    c.ideogramId = `IDG-${c.id}`;
+    c.ideogramId = `${c.id}.idg`;
     c.status = "has_ideogram";
   } else if (idx < 7) {
     c.status = "in_work";
@@ -809,7 +838,7 @@ batch2045.chromosomes.forEach((c, idx) => {
 const META_2045_OBJ: Metaphase = {
   id: META_2045,
   sampleId: "2045.66",
-  stainedId: "STN-2045-A-1",
+  stainedId: "2045.66.1.1.1",
   psdFileName: "2045.66-pAs1+GAA-08-204.55.psd",
   coordinates: "204.55",
   photoNumber: "08",
@@ -822,8 +851,8 @@ const META_2045_OBJ: Metaphase = {
 const IMPORT_2045: KaryotypeImport = {
   id: IMPORT_2045_ID,
   sampleId: "2045.66",
-  preparationId: "SLD-2045-A",
-  stainedId: "STN-2045-A-1",
+  preparationId: "2045.66.1.1",
+  stainedId: "2045.66.1.1.1",
   psdFileName: "2045.66-pAs1+GAA-08-204.55.psd",
   parsedSampleId: "2045.66",
   parsedProbes: ["pAs1", "GAA"],
@@ -845,7 +874,7 @@ const IMPORT_2045: KaryotypeImport = {
       id: "h2",
       ts: KAR_DATE_FULL,
       label: "Совпадение с окрашенным препаратом",
-      detail: "STN-2045-A-1 — pAs1 + GAA",
+      detail: "2045.66.1.1.1 — pAs1 + GAA",
       level: "success",
     },
     {
@@ -864,7 +893,7 @@ const LAYOUT_2045: GenomeLayout = {
   sampleId: "2045.66",
   level: "metaphase",
   metaphaseId: META_2045,
-  stainedId: "STN-2045-A-1",
+  stainedId: "2045.66.1.1.1",
   subgenomes: ["A", "B", "D"],
   classCount: 7,
   assignments: batch2045.chromosomes
@@ -882,12 +911,12 @@ const LAYOUT_2045: GenomeLayout = {
 
 /* ----- 1772.01: полный готовый кариотип (для экспорта) ----- */
 
-const META_1772 = "MET-1772-1";
+const META_1772 = "1772.01.1.1.1.m1";
 const IMPORT_1772_ID = "KIM-1772";
 const batch1772 = makeChromosomeBatch(
   META_1772,
   "1772.01",
-  "STN-1772-A-1",
+  "1772.01.1.1.1",
   IMPORT_1772_ID,
   21, // 7 классов × 3 субгенома
   101
@@ -899,14 +928,14 @@ batch1772.chromosomes.forEach((c, idx) => {
   c.chromosomeClass = (idx % 7) + 1;
   c.displayName = `${c.subgenome}${c.chromosomeClass}`;
   c.status = "has_ideogram";
-  c.ideogramId = `IDG-${c.id}`;
+  c.ideogramId = `${c.id}.idg`;
   c.selectedForKaryotype = true;
   c.confidence = "high";
 });
 const IDEOGRAMS_1772: Ideogram[] = batch1772.chromosomes.map(
   (c, idx): Ideogram => {
     const idg: Ideogram = {
-      id: `IDG-${c.id}`,
+      id: `${c.id}.idg`,
       chromosomeId: c.id,
       lengthPx: c.maskSizePx,
       centromere: 0.3 + (idx % 5) * 0.05,
@@ -945,7 +974,7 @@ const IDEOGRAMS_1772: Ideogram[] = batch1772.chromosomes.map(
 const META_1772_OBJ: Metaphase = {
   id: META_1772,
   sampleId: "1772.01",
-  stainedId: "STN-1772-A-1",
+  stainedId: "1772.01.1.1.1",
   psdFileName: "1772.01-pAs1+GAA-12-088.21.psd",
   coordinates: "088.21",
   photoNumber: "12",
@@ -957,8 +986,8 @@ const META_1772_OBJ: Metaphase = {
 const IMPORT_1772: KaryotypeImport = {
   id: IMPORT_1772_ID,
   sampleId: "1772.01",
-  preparationId: "SLD-1772-A",
-  stainedId: "STN-1772-A-1",
+  preparationId: "1772.01.1.1",
+  stainedId: "1772.01.1.1.1",
   psdFileName: "1772.01-pAs1+GAA-12-088.21.psd",
   parsedSampleId: "1772.01",
   parsedProbes: ["pAs1", "GAA"],
@@ -991,7 +1020,7 @@ const LAYOUT_1772: GenomeLayout = {
   id: "GLY-1772-1",
   sampleId: "1772.01",
   level: "hybridization",
-  stainedId: "STN-1772-A-1",
+  stainedId: "1772.01.1.1.1",
   subgenomes: ["A", "B", "D"],
   classCount: 7,
   assignments: batch1772.chromosomes.map((c) => ({
@@ -1005,7 +1034,7 @@ const LAYOUT_1772: GenomeLayout = {
   updatedAt: RESULT_DATE,
 };
 const SAMPLE_KARYOTYPE_1772: SampleKaryotype = {
-  id: "SK-1772-1",
+  id: "1772.01.kar.1",
   sampleId: "1772.01",
   title: "Лицевой кариотип S-1772.01 · pAs1 + GAA",
   status: "exported",
@@ -1023,7 +1052,7 @@ const EXPORT_JOB_1772: ExportJob = {
   templateType: "standard",
   templateId: "tpl-standard",
   sampleIds: ["1772.01"],
-  karyotypeIds: ["SK-1772-1"],
+  karyotypeIds: ["1772.01.kar.1"],
   settings: {
     view: "chromosomes_with_ideograms",
     alignByCentromere: true,

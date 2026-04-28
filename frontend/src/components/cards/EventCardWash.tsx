@@ -16,6 +16,18 @@ export default function EventCardWash({ event }: Props) {
     s.preparations.filter((p) => event.preparationIds.includes(p.id))
   );
 
+  // Правка 15: уникальные sampleId партии и сколько препаратов от каждого образца
+  // вошло в эту партию (для блока «Образцы партии» в сайдбаре).
+  const batchSamples = (() => {
+    const map = new Map<string, number>();
+    for (const p of preps) {
+      map.set(p.sampleId, (map.get(p.sampleId) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([id, count]) => ({ id, count }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+  })();
+
   return (
     <EventCardShell
       event={event}
@@ -25,31 +37,64 @@ export default function EventCardWash({ event }: Props) {
         { label: event.title },
       ]}
       side={
-        <Card accent>
-          <h3 className="text-[14px] font-bold text-brand-deep">
-            Сводка партии
-          </h3>
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-[12.5px] text-brand-muted">Препаратов</span>
-            <span className="text-[24px] font-extrabold text-brand-deep">
-              {String(preps.length).padStart(2, "0")}
-            </span>
-          </div>
-          <div className="mt-3 space-y-2 text-[12.5px]">
-            <div className="flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5">
-              <span className="text-brand-muted">Новый холодильник</span>
-              <span className="font-bold text-brand-deep">
-                {event.newFridge ?? "—"}
+        <>
+          <Card accent>
+            <h3 className="text-[14px] font-bold text-brand-deep">
+              Сводка партии
+            </h3>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-[12.5px] text-brand-muted">Препаратов</span>
+              <span className="text-[24px] font-extrabold text-brand-deep">
+                {String(preps.length).padStart(2, "0")}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5">
-              <span className="text-brand-muted">Новая коробка</span>
-              <span className="font-bold text-brand-deep">
-                {event.newBox ?? "—"}
-              </span>
+            <div className="mt-3 space-y-2 text-[12.5px]">
+              <div className="flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5">
+                <span className="text-brand-muted">Новый холодильник</span>
+                <span className="font-bold text-brand-deep">
+                  {event.newFridge ?? "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5">
+                <span className="text-brand-muted">Новая коробка</span>
+                <span className="font-bold text-brand-deep">
+                  {event.newBox ?? "—"}
+                </span>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          {/* Правка 15: уникальные образцы партии — со счётчиком и ссылкой. */}
+          <Card>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[14px] font-bold text-brand-deep">
+                Образцы партии
+              </h3>
+              <Badge tone="default">{batchSamples.length}</Badge>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {batchSamples.map((bs) => (
+                <button
+                  key={bs.id}
+                  onClick={() => nav(`/журнал/образец/${bs.id}`)}
+                  className="flex w-full items-center justify-between rounded-xl border border-brand-line bg-white px-3 py-2 text-left transition hover:bg-brand-mint/40"
+                >
+                  <span className="text-sm font-extrabold text-brand-deep">
+                    S-{bs.id}
+                  </span>
+                  <span className="text-[11.5px] text-brand-muted">
+                    {bs.count} преп.
+                  </span>
+                </button>
+              ))}
+              {batchSamples.length === 0 && (
+                <div className="rounded-xl border border-dashed border-brand-line p-2 text-center text-[12px] text-brand-muted">
+                  В партии нет препаратов.
+                </div>
+              )}
+            </div>
+          </Card>
+        </>
       }
     >
       <Card>

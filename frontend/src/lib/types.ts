@@ -55,11 +55,25 @@ export type PreparationSource =
   | { kind: "mix" };
 
 export interface Sample {
+  /**
+   * Канонический id образца — `<линия>.<год>` (см. `lib/naming.ts`).
+   * Линия может быть числовой (`1730`) или буквенной (`добрыня`).
+   */
   id: string;
-  numericId?: string;
+  /** Альтернативное «читаемое» отображение для UI (`S-1730.25`). Хранится опционально. */
+  displayId?: string;
+  /** Свободное название партии/линии — отдельно от id. */
   name?: string;
   species: string;
+  /**
+   * id образца-матери. Это ссылка на другой `Sample.id`, а не свободная строка.
+   * Если такого образца нет в системе — он будет создан как «пустой» (только id).
+   */
   mother?: string;
+  /**
+   * id образца-отца. Это ссылка на другой `Sample.id`, а не свободная строка.
+   * Если такого образца нет в системе — он будет создан как «пустой» (только id).
+   */
   father?: string;
   sowingYear?: number;
   generation?: string;
@@ -70,7 +84,10 @@ export interface Sample {
 }
 
 export interface Plant {
+  /** Канонический id растения: `<sample>.<n>`, для смеси — `<sample>.0`. */
   id: string;
+  /** «Читаемое» отображение для UI (`PL-1730.25-1`, `PL-1730.25-MIX`). */
+  displayId?: string;
   sampleId: string;
   name: string;
   location?: string;
@@ -78,7 +95,10 @@ export interface Plant {
 }
 
 export interface Preparation {
+  /** Канонический id препарата: `<plant>.<n>` (например `1730.25.1.1`). */
   id: string;
+  /** «Читаемое» отображение (`SLD-1730.25.1-1`). */
+  displayId?: string;
   sampleId: string;
   /** Источник материала: растение или смесь растений. */
   source: PreparationSource;
@@ -93,7 +113,10 @@ export interface Preparation {
 }
 
 export interface StainedPreparation {
+  /** Канонический id окраски: `<preparation>.<cycle>` (например `1730.25.1.1.1`). */
   id: string;
+  /** «Читаемое» отображение (`STN-1-1730.25.1.1`). */
+  displayId?: string;
   preparationId: string;
   /** Номер окраски: 1, 2 или 3. */
   cycleNumber: number;
@@ -171,6 +194,8 @@ export interface PhotographingEvent extends EventBase {
 export interface FreeEvent extends EventBase {
   type: "free";
   attachmentName?: string;
+  /** Свободные пользовательские теги (хеш-теги без `#`). */
+  tags?: string[];
 }
 
 export type JournalEvent =
@@ -324,7 +349,10 @@ export interface KaryotypeImport {
 }
 
 export interface Metaphase {
+  /** Канонический id метафазы: `<stained>.m<n>` (например `1730.25.1.1.1.m1`). */
   id: string;
+  /** «Читаемое» отображение для UI. */
+  displayId?: string;
   sampleId: string;
   stainedId: string;
   psdFileName: string;
@@ -379,13 +407,17 @@ export interface Ideogram {
 }
 
 export interface ChromosomeObject {
+  /** Канонический id хромосомы: `<metaphase>.c<NN>` (например `1730.25.1.1.1.m1.c01`). */
   id: string;
+  /** Дополнительное «читаемое» отображение системного id (`PHO-…` и пр.). */
+  displayId?: string;
   sampleId: string;
   metaphaseId: string;
   stainedId: string;
   sourceLayerId: string;
   importId: string;
   temporaryName: string;
+  /** Имя класса после разметки: `1A`, `5D` и т. п. (отдельно от технического id). */
   displayName?: string;
   maskSizePx: number;
   imageSeed: number;
@@ -456,7 +488,10 @@ export interface GenomeLayout {
 }
 
 export interface SampleKaryotype {
+  /** Канонический id обзорного кариотипа: `<sample>.kar.<n>` (например `1730.25.kar.1`). */
   id: string;
+  /** «Читаемое» отображение для UI. */
+  displayId?: string;
   sampleId: string;
   title: string;
   status: SampleKaryotypeStatus;

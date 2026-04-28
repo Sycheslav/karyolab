@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useStore } from "@/lib/store";
@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import SectionTitle from "@/components/ui/SectionTitle";
 import SampleMultiPicker from "./SampleMultiPicker";
 import { Lightbulb, Sprout, Timer } from "lucide-react";
+import { defaultBatchName, isoDay } from "@/lib/utils";
 
 interface Props {
   defaultDate?: string;
@@ -16,16 +17,24 @@ interface Props {
 export default function GerminationForm({ defaultDate }: Props) {
   const nav = useNavigate();
   const addEvent = useStore((s) => s.addEvent);
+  const events = useStore((s) => s.events);
 
-  const [batch, setBatch] = useState(
-    `GER-${new Date().getFullYear()}-${String(
-      new Date().getMonth() + 1
-    ).padStart(2, "0")}-A`
-  );
-  const [samples, setSamples] = useState<string[]>([]);
   const todayIso = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(defaultDate ?? todayIso);
   const [time, setTime] = useState("09:00");
+  // Дефолтное имя партии: `GER-{YYYY-MM-DD}` или с суффиксом `-N`,
+  // если в этот день уже есть проращивания (правка 14).
+  const sameDayCount = useMemo(
+    () =>
+      events.filter(
+        (e) => e.type === "germination" && isoDay(e.startDate) === date
+      ).length,
+    [events, date]
+  );
+  const [batch, setBatch] = useState(() =>
+    defaultBatchName("germination", date, sameDayCount)
+  );
+  const [samples, setSamples] = useState<string[]>([]);
 
   function save() {
     if (samples.length === 0) {

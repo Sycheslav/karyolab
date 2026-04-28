@@ -237,18 +237,6 @@ export default function ArchivePage() {
               Скачать историю
             </Button>
           </Card>
-
-          <Card dark>
-            <h3 className="text-[14px] font-bold text-brand-cream">
-              Заполнение архива
-            </h3>
-            <div className="mt-2 h-2 w-full rounded-full bg-white/10">
-              <div className="h-full w-4/5 rounded-full bg-brand-accent" />
-            </div>
-            <p className="mt-2 text-[11.5px] text-brand-cream/80">
-              Архив заполнен на 82%. Подумайте о выгрузке старых записей.
-            </p>
-          </Card>
         </div>
       </div>
     </div>

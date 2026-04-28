@@ -49,6 +49,7 @@ import type {
   TiltEntry,
 } from "./types";
 import { isoDay } from "./utils";
+import { nextChildId } from "./naming";
 
 interface KaryotypeContext {
   sampleId?: string;
@@ -92,6 +93,8 @@ interface State {
 
   addSample: (s: Sample) => void;
   addEvent: (ev: JournalEvent, change?: ChangeRecord[]) => void;
+  /** Частичное обновление существующего ивента по id. */
+  updateEvent: (id: string, patch: Partial<JournalEvent>) => void;
 
   addNote: (note: Omit<Note, "id" | "createdAt" | "archived">) => Note;
   archiveNote: (id: string) => void;
@@ -236,6 +239,13 @@ export const useStore = create<State>((set, get) => ({
     set((st) => ({
       events: [ev, ...st.events],
       lastChange: change,
+    })),
+
+  updateEvent: (id, patch) =>
+    set((st) => ({
+      events: st.events.map((e) =>
+        e.id === id ? ({ ...e, ...patch } as JournalEvent) : e
+      ),
     })),
 
   addNote: (note) => {
@@ -436,23 +446,38 @@ export const useStore = create<State>((set, get) => ({
     );
     if (layers.length === 0) return undefined;
     const ts = nowIso();
-    const metaphaseId = imp.metaphaseId ?? `MET-${importId}`;
-    const newChromosomes: ChromosomeObject[] = layers.map((l, idx) => ({
-      id: `CHR-${metaphaseId}-${String(idx + 1).padStart(2, "0")}`,
-      sampleId: imp.sampleId!,
-      metaphaseId,
-      stainedId: imp.stainedId!,
-      sourceLayerId: l.id,
-      importId,
-      temporaryName: l.temporaryName,
-      maskSizePx: l.maskSizePx,
-      imageSeed: l.imageSeed,
-      bodyHue: 200 + (l.imageSeed % 30),
-      redSpots: (l.imageSeed >> 1) % 3,
-      greenSpots: (l.imageSeed >> 2) % 4,
-      centromereHint: 0.25 + ((l.imageSeed % 50) / 100),
-      status: "new",
-    }));
+    // Метафаза всегда живёт под окраской: `<stainedId>.m<n>` по схеме naming.ts.
+    const metaphaseId =
+      imp.metaphaseId ??
+      nextChildId(imp.stainedId, "metaphase", st.metaphases.map((m) => m.id));
+    // Канонические id хромосом: `<metaphase>.cNN`. Учитываем уже существующие,
+    // чтобы при повторных импортах не было коллизий.
+    const existingChromIds = st.chromosomes
+      .filter((c) => c.metaphaseId === metaphaseId)
+      .map((c) => c.id);
+    const newChromosomes: ChromosomeObject[] = [];
+    for (const l of layers) {
+      const id = nextChildId(metaphaseId, "chromosome", [
+        ...existingChromIds,
+        ...newChromosomes.map((c) => c.id),
+      ]);
+      newChromosomes.push({
+        id,
+        sampleId: imp.sampleId!,
+        metaphaseId,
+        stainedId: imp.stainedId!,
+        sourceLayerId: l.id,
+        importId,
+        temporaryName: l.temporaryName,
+        maskSizePx: l.maskSizePx,
+        imageSeed: l.imageSeed,
+        bodyHue: 200 + (l.imageSeed % 30),
+        redSpots: (l.imageSeed >> 1) % 3,
+        greenSpots: (l.imageSeed >> 2) % 4,
+        centromereHint: 0.25 + ((l.imageSeed % 50) / 100),
+        status: "new",
+      });
+    }
     const metaphase: Metaphase = st.metaphases.find((m) => m.id === metaphaseId) ?? {
       id: metaphaseId,
       sampleId: imp.sampleId!,
@@ -609,8 +634,9 @@ export const useStore = create<State>((set, get) => ({
       const ts = nowIso();
       const ideograms = st.ideograms.map((i) => {
         if (i.chromosomeId !== chromosomeId) return i;
+        // Сохранённая идеограмма получает канонический id `<chromosome>.idg`.
         const newId = i.id.startsWith("IDG-DRAFT-")
-          ? `IDG-${chromosomeId}`
+          ? `${chromosomeId}.idg`
           : i.id;
         return {
           ...i,
@@ -1024,6 +1050,38 @@ export function selectLastStain(
   return state.stained
     .filter((s) => s.preparationId === preparationId)
     .sort((a, b) => b.cycleNumber - a.cycleNumber)[0];
+}
+
+/**
+ * Полная история окрашиваний препарата по возрастанию `cycleNumber`.
+ * Используется в прогрессе главной (правка 5.2) и в форме гибридизации
+ * (правка 16) для подсказки «чем стекло уже окрашивалось».
+ */
+export function selectStainHistory(
+  state: State,
+  preparationId: string
+): StainedPreparation[] {
+  return state.stained
+    .filter((s) => s.preparationId === preparationId)
+    .sort((a, b) => a.cycleNumber - b.cycleNumber);
+}
+
+/**
+ * Компактный текст истории окрасок: `1: GAA + pAs1 / 2: pAs119 + pTa713`.
+ * Разделитель между циклами можно заменить на `\n` для табличного режима
+ * (форма гибридизации использует перенос строки).
+ */
+export function formatStainHistoryShort(
+  history: StainedPreparation[],
+  separator: string = " / "
+): string {
+  if (history.length === 0) return "";
+  return history
+    .map((st) => {
+      const probes = st.probes.map((p) => p.name).join(" + ") || "—";
+      return `${st.cycleNumber}: ${probes}`;
+    })
+    .join(separator);
 }
 
 /* --- кариотип selectors --- */

@@ -9,6 +9,7 @@ import SectionTitle from "@/components/ui/SectionTitle";
 import StorageFields from "./StorageFields";
 import PreparationTable from "./PreparationTable";
 import Textarea from "@/components/ui/Textarea";
+import { defaultBatchName, isoDay } from "@/lib/utils";
 
 interface Props {
   defaultDate?: string;
@@ -20,6 +21,7 @@ export default function WashForm({ defaultDate }: Props) {
   const addEvent = useStore((s) => s.addEvent);
   const preparations = useStore((s) => s.preparations);
   const plants = useStore((s) => s.plants);
+  const events = useStore((s) => s.events);
 
   const [globalFridge, setGlobalFridge] = useState("");
   const [globalBox, setGlobalBox] = useState("");
@@ -28,10 +30,16 @@ export default function WashForm({ defaultDate }: Props) {
   const [date, setDate] = useState(
     defaultDate ?? new Date().toISOString().slice(0, 10)
   );
-  const [batchName, setBatchName] = useState(
-    `WP-${new Date().getFullYear()}-${String(
-      new Date().getMonth() + 1
-    ).padStart(2, "0")}-A`
+  // Дефолт `WP-{YYYY-MM-DD}` (правка 14). Суффикс `-N` появляется, если в
+  // этот день уже зафиксирована хотя бы одна предгибридизационная отмывка.
+  const sameDayCount = useMemo(
+    () =>
+      events.filter((e) => e.type === "wash" && isoDay(e.startDate) === date)
+        .length,
+    [events, date]
+  );
+  const [batchName, setBatchName] = useState(() =>
+    defaultBatchName("wash", date, sameDayCount)
   );
 
   // Только препараты, которым нужна именно предгибридизационная отмывка:

@@ -4,8 +4,7 @@ import Badge from "@/components/ui/Badge";
 import { useStore } from "@/lib/store";
 import type { SlideEvent } from "@/lib/types";
 import { useNavigate } from "react-router-dom";
-import { Pencil, Layers, Sprout, ArrowRight } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { Pencil } from "lucide-react";
 
 interface Props {
   event: SlideEvent;
@@ -18,12 +17,6 @@ export default function EventCardSlide({ event }: Props) {
   );
   const plants = useStore((s) => s.plants);
 
-  const src = event.source;
-  const sourceText =
-    src.kind === "mix"
-      ? "Смесь растений"
-      : plants.find((p) => p.id === src.plantId)?.name ?? src.plantId;
-
   return (
     <EventCardShell
       event={event}
@@ -33,38 +26,14 @@ export default function EventCardSlide({ event }: Props) {
         { label: event.title },
       ]}
       side={
-        <>
-          <Card dark>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-brand-cream/70">
-              Создано препаратов
-            </div>
-            <div className="mt-2 text-[42px] font-extrabold text-white">
-              {String(preps.length).padStart(2, "0")}
-            </div>
-          </Card>
-          <Card>
-            <div className="flex items-center gap-2">
-              {event.source.kind === "mix" ? (
-                <Layers size={14} className="text-amber-700" />
-              ) : (
-                <Sprout size={14} className="text-brand-dark" />
-              )}
-              <h3 className="text-[14px] font-bold text-brand-deep">
-                Источник материала
-              </h3>
-            </div>
-            <p className="mt-2 text-[13px] text-brand-deep/85">{sourceText}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full"
-              onClick={() => nav(`/журнал/образец/${event.sampleId}`)}
-            >
-              <ArrowRight size={13} />
-              К карточке образца S-{event.sampleId}
-            </Button>
-          </Card>
-        </>
+        <Card dark>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-brand-cream/70">
+            Создано препаратов
+          </div>
+          <div className="mt-2 text-[42px] font-extrabold text-white">
+            {String(preps.length).padStart(2, "0")}
+          </div>
+        </Card>
       }
     >
       <Card>

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { UploadCloud, Info } from "lucide-react";
+import { Hash, Info, UploadCloud, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
+import Tag from "@/components/ui/Tag";
 
 interface Props {
   defaultDate?: string;
@@ -23,6 +24,17 @@ export default function FreeEventForm({ defaultDate }: Props) {
   const [time, setTime] = useState("12:00");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<string | null>(null);
+  // Свободные пользовательские теги (правка 8).
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  function addTag(raw: string) {
+    const t = raw.trim().replace(/^#+/, "").toLowerCase();
+    if (!t) return;
+    if (tags.includes(t)) return;
+    setTags((arr) => [...arr, t]);
+    setTagInput("");
+  }
 
   function save() {
     if (!title.trim()) {
@@ -40,6 +52,7 @@ export default function FreeEventForm({ defaultDate }: Props) {
         status: "completed",
         comment: note,
         attachmentName: file ?? undefined,
+        tags: tags.length > 0 ? tags : undefined,
         createdAt: new Date().toISOString(),
       },
       [
@@ -90,6 +103,58 @@ export default function FreeEventForm({ defaultDate }: Props) {
             onChange={(e) => setNote(e.target.value)}
             rows={5}
           />
+        </div>
+
+        {/*
+          Поле «Теги» — chips + input (правка 8). Те же теги индексируются и в
+          архиве заметок, и в потенциальном глобальном поиске.
+        */}
+        <div className="mt-4">
+          <span className="label-cap mb-1.5 block">Теги</span>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-line bg-white px-3 py-2">
+            <Hash size={14} className="text-brand-muted" />
+            {tags.map((t) => (
+              <Tag key={t} onRemove={() => setTags((arr) => arr.filter((x) => x !== t))}>
+                #{t}
+              </Tag>
+            ))}
+            <input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addTag(tagInput);
+                } else if (
+                  e.key === "Backspace" &&
+                  !tagInput &&
+                  tags.length > 0
+                ) {
+                  setTags((arr) => arr.slice(0, -1));
+                }
+              }}
+              onBlur={() => addTag(tagInput)}
+              placeholder={
+                tags.length === 0
+                  ? "наблюдение, протокол, инцидент…"
+                  : "ещё тег…"
+              }
+              className="min-w-[120px] flex-1 bg-transparent text-sm text-brand-deep outline-none placeholder:text-brand-muted/70"
+            />
+            {tagInput && (
+              <button
+                type="button"
+                onClick={() => setTagInput("")}
+                className="text-brand-muted"
+                aria-label="Очистить ввод"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <span className="mt-1 block text-[11.5px] text-brand-muted">
+            Enter или запятая — добавить тег. Backspace — удалить последний.
+          </span>
         </div>
 
         <button

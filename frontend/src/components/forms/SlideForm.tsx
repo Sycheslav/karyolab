@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useStore } from "@/lib/store";
 import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
@@ -10,7 +11,8 @@ import SectionTitle from "@/components/ui/SectionTitle";
 import StorageFields from "./StorageFields";
 import { FlaskConical, Info, Plus } from "lucide-react";
 import { classNames } from "@/lib/utils";
-import type { PreparationSource, Quality } from "@/lib/types";
+import { mixPlantId, nextChildId } from "@/lib/naming";
+import type { Preparation, PreparationSource, Quality } from "@/lib/types";
 
 interface Props {
   defaultDate?: string;
@@ -21,6 +23,7 @@ export default function SlideForm({ defaultDate }: Props) {
   const addEvent = useStore((s) => s.addEvent);
   const samples = useStore((s) => s.samples);
   const plants = useStore((s) => s.plants);
+  const preparations = useStore((s) => s.preparations);
 
   const [sampleId, setSampleId] = useState(samples[0]?.id ?? "");
   const sPlants = useMemo(
@@ -39,6 +42,9 @@ export default function SlideForm({ defaultDate }: Props) {
   const [jar, setJar] = useState("");
   const [fridge, setFridge] = useState("");
   const [comment, setComment] = useState("");
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(defaultDate ?? todayIso);
+  const [time, setTime] = useState("13:00");
 
   // Если у образца нет растений и пользователь выбрал «растение», подсказка.
   const noPlantsAvailable = sourceKind === "plant" && sPlants.length === 0;
@@ -57,8 +63,15 @@ export default function SlideForm({ defaultDate }: Props) {
       toast.error("Выберите конкретное растение или режим «смесь растений»");
       return;
     }
+    // id ивента — служебный (`EV-SL-…`), а вот id препарата теперь
+    // канонический: `<plant>.<n>` или `<sample>.0.<n>` для смеси (правка 0).
     const id = `EV-SL-${Date.now()}`;
-    const prepId = `SLD-${Date.now()}`;
+    const parentPlantId =
+      sourceKind === "mix" ? mixPlantId(sampleId) : plantId;
+    const takenPrepIds = preparations
+      .filter((p) => p.id.startsWith(parentPlantId + "."))
+      .map((p) => p.id);
+    const prepId = nextChildId(parentPlantId, "preparation", takenPrepIds);
     const source = buildSource();
     addEvent(
       {
@@ -74,7 +87,8 @@ export default function SlideForm({ defaultDate }: Props) {
         storageJar: jar,
         storageFridge: fridge,
         preparationIds: [prepId],
-        startDate: `${defaultDate ?? new Date().toISOString().slice(0, 10)}T13:00:00`,
+        // Дата создания препарата задаётся пользователем (правка 7).
+        startDate: `${date}T${time}:00`,
         operator: "Лаборант",
         status: "completed",
         comment,
@@ -95,6 +109,23 @@ export default function SlideForm({ defaultDate }: Props) {
         },
       ]
     );
+    // Также добавляем сам препарат в стор, чтобы счётчики прогресса/ссылки
+    // моментально отражали новый объект.
+    const newPrep: Preparation = {
+      id: prepId,
+      sampleId,
+      source,
+      createdAt: `${date}T${time}:00`,
+      quality,
+      status: "created",
+      fridge,
+      box: jar,
+      comment,
+      stainCycle: 0,
+    };
+    useStore.setState((st) => ({
+      preparations: [newPrep, ...st.preparations],
+    }));
     toast.success("Препарат создан");
     if (createAnother) {
       // Не меняем образец и хранение — упрощаем «ещё один от этого образца».
@@ -219,6 +250,24 @@ export default function SlideForm({ defaultDate }: Props) {
               </button>
             ))}
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle title="Дата создания препарата" />
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Дата"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          <Input
+            label="Время"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
         </div>
       </Card>
 

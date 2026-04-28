@@ -62,7 +62,10 @@ export default function EventCardFree({ event }: Props) {
           )}
           <div className="mt-4 flex items-center justify-between">
             <div className="flex flex-wrap gap-1.5">
-              <Tag>#наблюдение</Tag>
+              {/* Теги ивента — теперь живые, см. правку 8. */}
+              {(event.tags ?? []).map((t) => (
+                <Tag key={t}>#{t}</Tag>
+              ))}
             </div>
             {event.operator && (
               <span className="inline-flex items-center gap-1.5 text-[11.5px] text-brand-muted">

@@ -97,4 +97,59 @@ export function eventTotalDays<T extends { startDate: string; endDate?: string }
   return differenceInCalendarDays(e, s) + 1;
 }
 
+/**
+ * Группирует список ивентов по паре «(день старта, тип)».
+ *
+ * Используется и в календаре, и в ленте дня для требования заказчика
+ * «несколько ивентов одного типа за день показываются одной плашкой /
+ * строкой». Возвращает массив групп с ключом `${date}|${type}`.
+ *
+ * Учитывается только день начала ивента (`startDate`), без раскладки
+ * многодневных ивентов на каждый из перекрытых дней — это делается
+ * отдельно в календаре через `eventOverlapsDay`.
+ */
+export function groupEventsByDayAndType<
+  T extends { id: string; startDate: string; type: string }
+>(events: T[]): Array<{ date: string; type: string; items: T[] }> {
+  const m = new Map<string, T[]>();
+  for (const ev of events) {
+    const day = isoDay(ev.startDate);
+    const key = `${day}|${ev.type}`;
+    const arr = m.get(key) ?? [];
+    arr.push(ev);
+    m.set(key, arr);
+  }
+  return Array.from(m.entries()).map(([key, items]) => {
+    const [date, type] = key.split("|");
+    return { date, type, items };
+  });
+}
+
+const BATCH_PREFIX: Record<string, string> = {
+  germination: "GER",
+  wash: "WP",
+  hybridization: "HYB",
+  photographing: "PHOTO",
+  slide: "SLD",
+  free: "FREE",
+};
+
+/**
+ * Дефолтное имя партии для ивента вида `{префикс}-{YYYY-MM-DD}` или
+ * `{префикс}-{YYYY-MM-DD}-{N}`, если в этот день уже есть партия того же типа.
+ *
+ * @param type   тип ивента (germination, wash, hybridization, …)
+ * @param date   ISO-дата дня (YYYY-MM-DD)
+ * @param sameDayCount  число существующих партий того же типа в этот день
+ */
+export function defaultBatchName(
+  type: string,
+  date: string,
+  sameDayCount: number
+): string {
+  const prefix = BATCH_PREFIX[type] ?? type.toUpperCase();
+  if (sameDayCount <= 0) return `${prefix}-${date}`;
+  return `${prefix}-${date}-${sameDayCount + 1}`;
+}
+
 export { isSameDay, parseISO };

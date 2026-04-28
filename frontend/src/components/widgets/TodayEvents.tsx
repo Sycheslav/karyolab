@@ -1,11 +1,34 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, StickyNote } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, StickyNote } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
 import { parseISO, startOfDay } from "date-fns";
-import { eventLeftBar } from "@/components/calendar/eventColors";
+import {
+  eventLeftBar,
+  eventTypeLabel,
+} from "@/components/calendar/eventColors";
 import { classNames, fmtDateLong, fmtTime, isoDay } from "@/lib/utils";
 import Button from "@/components/ui/Button";
+import type { EventType, JournalEvent } from "@/lib/types";
+
+interface DayEventGroup {
+  kind: "event-group";
+  type: EventType;
+  items: JournalEvent[];
+  /** Сортировка по самой ранней дате в группе. */
+  time: string;
+}
+
+interface DayNote {
+  kind: "note";
+  id: string;
+  time: string;
+  title: string;
+  comment?: string;
+}
+
+type DayItem = DayEventGroup | DayNote;
 
 export default function TodayEvents() {
   const events = useStore((s) => s.events);
@@ -13,37 +36,47 @@ export default function TodayEvents() {
   const selectedDate = useStore((s) => s.selectedDate);
   const nav = useNavigate();
 
-  const dayItems = useMemo(() => {
-    const d = startOfDay(parseISO(selectedDate));
-    const evs = events
-      .filter((ev) => {
-        const s = startOfDay(parseISO(ev.startDate));
-        const e = startOfDay(parseISO(ev.endDate ?? ev.startDate));
-        return d >= s && d <= e;
-      })
-      .map((ev) => ({
-        kind: "event" as const,
-        id: ev.id,
-        time: ev.startDate,
-        title: ev.title,
-        comment: ev.comment,
-        type: ev.type,
-        completed: ev.status === "completed",
-      }));
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-    // По 08_заметки_и_тильт.md: заметки не отображаются в календаре,
-    // но появляются в событиях выбранного дня.
-    const dayNotes = notes
+  const dayItems = useMemo<DayItem[]>(() => {
+    const d = startOfDay(parseISO(selectedDate));
+    const evs = events.filter((ev) => {
+      const s = startOfDay(parseISO(ev.startDate));
+      const e = startOfDay(parseISO(ev.endDate ?? ev.startDate));
+      return d >= s && d <= e;
+    });
+
+    // Группируем ивенты дня по типу — несколько одного типа отображаются
+    // одной строкой с подписью «{label} · N шт.» (правка 2).
+    const grouped = new Map<EventType, JournalEvent[]>();
+    for (const ev of evs) {
+      const arr = grouped.get(ev.type) ?? [];
+      arr.push(ev);
+      grouped.set(ev.type, arr);
+    }
+    const groups: DayEventGroup[] = Array.from(grouped.entries()).map(
+      ([type, items]) => ({
+        kind: "event-group",
+        type,
+        items: items.sort((a, b) => +parseISO(a.startDate) - +parseISO(b.startDate)),
+        time: items.reduce(
+          (min, ev) => (ev.startDate < min ? ev.startDate : min),
+          items[0].startDate
+        ),
+      })
+    );
+
+    const dayNotes: DayNote[] = notes
       .filter((n) => !n.archived && isoDay(n.createdAt) === selectedDate)
       .map((n) => ({
-        kind: "note" as const,
+        kind: "note",
         id: n.id,
         time: n.createdAt,
         title: n.title,
         comment: n.body,
       }));
 
-    return [...evs, ...dayNotes].sort(
+    return [...groups, ...dayNotes].sort(
       (a, b) => +parseISO(a.time) - +parseISO(b.time)
     );
   }, [events, notes, selectedDate]);
@@ -102,13 +135,24 @@ export default function TodayEvents() {
             );
           }
 
-          const completed = it.completed;
+          // Группа ивентов одного типа: одна строка-агрегатор +
+          // раскрываемый список с переходами в каждую карточку.
+          const groupKey = `${it.type}|${it.time}`;
+          const expanded = !!expandedGroups[groupKey];
+          const head = it.items[0];
+          const completed = it.items.every((e) => e.status === "completed");
+          const isStack = it.items.length > 1;
+          // Для slide заказчик хочет «N шт.» даже при одном ивенте.
+          const showCount = isStack || it.type === "slide";
+          const groupLabel = showCount
+            ? `${eventTypeLabel[it.type]} · ${it.items.length} шт.`
+            : head.title;
+
           return (
-            <button
-              key={it.id}
-              onClick={() => nav(`/журнал/ивент/${it.id}`)}
+            <div
+              key={groupKey}
               className={classNames(
-                "relative flex w-full items-stretch gap-3 overflow-hidden rounded-xl border bg-white p-3 text-left transition hover:bg-brand-mint/40",
+                "relative overflow-hidden rounded-xl border bg-white",
                 completed
                   ? "border-brand-line opacity-60"
                   : "border-brand-line"
@@ -120,30 +164,69 @@ export default function TodayEvents() {
                   completed ? "bg-brand-line" : eventLeftBar[it.type]
                 )}
               />
-              <div className="ml-1 flex-1">
-                <div
-                  className={classNames(
-                    "text-[11px] font-semibold uppercase tracking-wider text-brand-muted",
-                    completed && "line-through"
-                  )}
-                >
-                  {fmtTime(it.time)}
-                </div>
-                <div
-                  className={classNames(
-                    "text-sm font-bold text-brand-deep",
-                    completed && "line-through"
-                  )}
-                >
-                  {it.title}
-                </div>
-                {it.comment && (
-                  <div className="mt-0.5 text-[12px] text-brand-muted">
-                    {it.comment}
+              <button
+                onClick={() => {
+                  if (isStack) {
+                    setExpandedGroups((s) => ({ ...s, [groupKey]: !s[groupKey] }));
+                  } else {
+                    nav(`/журнал/ивент/${head.id}`);
+                  }
+                }}
+                className="flex w-full items-stretch gap-3 p-3 text-left transition hover:bg-brand-mint/40"
+              >
+                <div className="ml-1 flex-1">
+                  <div
+                    className={classNames(
+                      "text-[11px] font-semibold uppercase tracking-wider text-brand-muted",
+                      completed && "line-through"
+                    )}
+                  >
+                    {fmtTime(it.time)}
                   </div>
+                  <div
+                    className={classNames(
+                      "text-sm font-bold text-brand-deep",
+                      completed && "line-through"
+                    )}
+                  >
+                    {groupLabel}
+                  </div>
+                  {!isStack && head.comment && (
+                    <div className="mt-0.5 text-[12px] text-brand-muted">
+                      {head.comment}
+                    </div>
+                  )}
+                </div>
+                {isStack && (
+                  <span className="grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-brand-muted">
+                    {expanded ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronRight size={14} />
+                    )}
+                  </span>
                 )}
-              </div>
-            </button>
+              </button>
+
+              {isStack && expanded && (
+                <div className="space-y-1 border-t border-brand-line/60 bg-brand-mint/15 p-2">
+                  {it.items.map((ev) => (
+                    <button
+                      key={ev.id}
+                      onClick={() => nav(`/журнал/ивент/${ev.id}`)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg bg-white px-3 py-1.5 text-left text-[12.5px] transition hover:bg-brand-mint/40"
+                    >
+                      <span className="truncate font-semibold text-brand-deep">
+                        {ev.title}
+                      </span>
+                      <span className="shrink-0 text-[10.5px] uppercase tracking-wider text-brand-muted">
+                        {fmtTime(ev.startDate)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

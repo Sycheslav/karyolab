@@ -1,8 +1,13 @@
 import { ChevronRight, BarChart3, Sprout } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { selectLastStain, selectProgressBuckets, useStore } from "@/lib/store";
+import {
+  formatStainHistoryShort,
+  selectProgressBuckets,
+  selectStainHistory,
+  useStore,
+} from "@/lib/store";
 import { useMemo } from "react";
-import type { Preparation, Sample } from "@/lib/types";
+import type { Preparation, Sample, StainedPreparation } from "@/lib/types";
 import { classNames } from "@/lib/utils";
 
 interface SimpleItem {
@@ -10,6 +15,8 @@ interface SimpleItem {
   label: string;
   hint?: string;
   href: string;
+  /** Дополнительные строки текста под основной — для истории отмывок/зондов. */
+  extraLines?: string[];
 }
 
 interface Column {
@@ -30,28 +37,54 @@ export default function ProgressLifecycle() {
   const cols: Column[] = useMemo(() => {
     const sampleItem = (s: Sample): SimpleItem => ({
       key: s.id,
+      // Используем «полный» ID образца — теряется привязка только если строки урезать.
       label: `S-${s.id}`,
       hint: s.species,
       href: `/журнал/образец/${s.id}`,
     });
     const prepItem = (p: Preparation): SimpleItem => ({
       key: p.id,
-      label: `${p.id}`,
+      // Канонический id препарата уже содержит образец (`1730.25.1.1`),
+      // префикс `S-` помогает при беглом чтении.
+      label: `S-${p.id}`,
       hint: `S-${p.sampleId}`,
       href: `/журнал/образец/${p.sampleId}`,
     });
-    const rehybItem = (p: Preparation): SimpleItem => {
-      const last = stained
-        .filter((s) => s.preparationId === p.id)
-        .sort((a, b) => b.cycleNumber - a.cycleNumber)[0];
-      const probes = last?.probes.map((pp) => pp.name).join(" + ") ?? "—";
+    /**
+     * Строка переотмытого препарата: `S-<id>  ×N  · 1: GAA + pAs1 / 2: pAs119 + pTa713`.
+     * (правка 5.2)
+     */
+    const rehybItem = (
+      p: Preparation,
+      historyByPrep: Map<string, StainedPreparation[]>
+    ): SimpleItem => {
+      const history = historyByPrep.get(p.id) ?? [];
+      const washCount = history.length;
+      const histLine = history
+        .map(
+          (h) =>
+            `${h.cycleNumber}: ${h.probes.map((pp) => pp.name).join(" + ")}`
+        )
+        .join(" / ");
       return {
         key: p.id,
-        label: `S-${p.sampleId}`,
-        hint: `${p.id} · ${probes}`,
+        label: `S-${p.id}`,
+        hint: washCount > 0 ? `×${washCount}` : "—",
         href: `/журнал/образец/${p.sampleId}`,
+        extraLines: histLine ? [histLine] : undefined,
       };
     };
+
+    // Заранее посчитаем историю окрасок для всех препаратов в группах rehyb.
+    const historyByPrep = new Map<string, StainedPreparation[]>();
+    for (const p of buckets.postHybWashed) {
+      historyByPrep.set(
+        p.id,
+        stained
+          .filter((s) => s.preparationId === p.id)
+          .sort((a, b) => a.cycleNumber - b.cycleNumber)
+      );
+    }
 
     const createdIds = buckets.created.map((p) => p.id).join(",");
     const washedIds = [...buckets.primaryWashed, ...buckets.postHybWashed]
@@ -91,8 +124,10 @@ export default function ProgressLifecycle() {
             items: buckets.primaryWashed.slice(0, 2).map(prepItem),
           },
           {
-            title: "Отмыт от гибридизации",
-            items: buckets.postHybWashed.slice(0, 2).map(rehybItem),
+            title: "Переотмытые (отмыт от гибридизации)",
+            items: buckets.postHybWashed
+              .slice(0, 2)
+              .map((p) => rehybItem(p, historyByPrep)),
           },
         ],
         action: {
@@ -136,11 +171,17 @@ export default function ProgressLifecycle() {
         title: "Есть результат",
         count: buckets.result.length,
         items: buckets.result.slice(0, 3).map(sampleItem),
-        action: { label: "Открыть все", href: "/журнал" },
+        // Заказчик: «открыть все» — это не главная, а отфильтрованный список образцов.
+        action: { label: "Открыть все", href: "/журнал/образцы?status=result" },
         dark: true,
       },
     ];
   }, [buckets, stained]);
+
+  // Утилита: построитель селектора оставлен для возможного расширения,
+  // см. selectStainHistory/formatStainHistoryShort выше.
+  void selectStainHistory;
+  void formatStainHistoryShort;
 
   return (
     <section className="card card-pad">
@@ -155,7 +196,7 @@ export default function ProgressLifecycle() {
           </span>
         </div>
         <button
-          onClick={() => nav("/журнал")}
+          onClick={() => nav("/журнал/образцы")}
           className="text-[12px] font-semibold text-brand-dark hover:underline"
         >
           Открыть полный список
@@ -191,9 +232,13 @@ export default function ProgressLifecycle() {
             </div>
 
             {c.groups ? (
-              <div className="mt-3 space-y-3">
-                {c.groups.map((g) => (
+              <div className="mt-3 space-y-2">
+                {c.groups.map((g, gi) => (
                   <div key={g.title}>
+                    {gi > 0 && (
+                      // Тонкий разделитель между «Первично отмыт» и «Переотмытые» (правка 5.2.1).
+                      <div className="my-2 h-px bg-brand-line" />
+                    )}
                     <div
                       className={classNames(
                         "mb-1 text-[10px] font-semibold uppercase tracking-wider",
@@ -225,14 +270,28 @@ export default function ProgressLifecycle() {
                                 ? "bg-white/5 text-brand-cream hover:bg-white/10"
                                 : "bg-brand-mint/40 text-brand-deep hover:bg-brand-mint"
                             )}
-                            title={it.hint}
+                            title={[it.label, it.hint, ...(it.extraLines ?? [])]
+                              .filter(Boolean)
+                              .join(" · ")}
                           >
-                            <span className="font-semibold">{it.label}</span>
-                            {it.hint && (
-                              <span className="ml-1 text-[10.5px] text-brand-muted">
-                                · {it.hint}
+                            <div className="flex items-center gap-1">
+                              <span className="truncate font-semibold">
+                                {it.label}
                               </span>
-                            )}
+                              {it.hint && (
+                                <span className="shrink-0 text-[10.5px] text-brand-muted">
+                                  · {it.hint}
+                                </span>
+                              )}
+                            </div>
+                            {it.extraLines?.map((ln, i) => (
+                              <div
+                                key={i}
+                                className="truncate text-[10.5px] font-mono text-brand-muted"
+                              >
+                                {ln}
+                              </div>
+                            ))}
                           </button>
                         ))}
                       </div>

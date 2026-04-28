@@ -6,6 +6,7 @@ import SampleCreatePage from "./pages/SampleCreatePage";
 import SamplePage from "./pages/SamplePage";
 import EventPage from "./pages/EventPage";
 import ArchivePage from "./pages/ArchivePage";
+import SamplesListPage from "./pages/SamplesListPage";
 import NotFound from "./pages/NotFound";
 import StubPage from "./pages/StubPage";
 import KaryotypeImportPage from "./pages/KaryotypeImportPage";
@@ -20,6 +21,7 @@ export default function AppRoutes() {
         <Route path="журнал" element={<JournalHome />} />
         <Route path="журнал/новый-ивент" element={<EventCreatePage />} />
         <Route path="журнал/новый-образец" element={<SampleCreatePage />} />
+        <Route path="журнал/образцы" element={<SamplesListPage />} />
         <Route path="журнал/ивент/:id" element={<EventPage />} />
         <Route path="журнал/образец/:id" element={<SamplePage />} />
         <Route path="журнал/архив" element={<ArchivePage />} />

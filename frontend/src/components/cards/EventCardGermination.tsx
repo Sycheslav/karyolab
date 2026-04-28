@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Check, Play, Sprout } from "lucide-react";
 import EventCardShell from "./EventCardShell";
 import type { GerminationEvent } from "@/lib/types";
@@ -6,24 +7,66 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { useStore } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
+import { addHours, format, parseISO } from "date-fns";
 import { classNames } from "@/lib/utils";
 
 interface Props {
   event: GerminationEvent;
 }
 
-const STEPS = [
-  { id: 0, title: "Закладка семян", note: "Начало экспериментального цикла" },
-  { id: 1, title: "Перенос в холодильник", note: "Период стратификации" },
-  { id: 2, title: "Перенос в термостат", note: "Длительность: 2 ч" },
-  { id: 3, title: "Обработка HU", note: "Жёсткий интервал: 18 ч" },
-  { id: 4, title: "Отмывка и доращивание", note: "Жёсткий интервал: 5 ч" },
+interface Step {
+  id: number;
+  title: string;
+  note: string;
+  /** Через сколько часов от стартовой даты этап завершается (для авто-расчёта). */
+  hoursFromStart?: number;
+  /** Этап имеет редактируемую дату вручную (первые три). */
+  editable?: boolean;
+}
+
+const STEPS: Step[] = [
+  {
+    id: 0,
+    title: "Закладка семян",
+    note: "Начало экспериментального цикла",
+    editable: true,
+  },
+  {
+    id: 1,
+    title: "Перенос в холодильник",
+    note: "Период стратификации",
+    editable: true,
+  },
+  {
+    id: 2,
+    title: "Перенос в термостат",
+    note: "Длительность: 2 ч",
+    editable: true,
+  },
+  {
+    id: 3,
+    title: "Обработка HU",
+    note: "Жёсткий интервал: 18 ч",
+    hoursFromStart: 20,
+  },
+  {
+    id: 4,
+    title: "Отмывка и доращивание",
+    note: "Жёсткий интервал: 5 ч",
+    hoursFromStart: 25,
+  },
   {
     id: 5,
     title: "Фиксация в холодильнике",
     note: "Интервал: 24 ч. Создать растения.",
+    hoursFromStart: 49,
   },
-  { id: 6, title: "Созревание и хранение", note: "Ожидаемая дата завершения" },
+  {
+    id: 6,
+    title: "Созревание и хранение",
+    note: "Ожидаемая дата завершения",
+    hoursFromStart: 14 * 24,
+  },
 ];
 
 export default function EventCardGermination({ event }: Props) {
@@ -31,6 +74,39 @@ export default function EventCardGermination({ event }: Props) {
   const samples = useStore((s) =>
     s.samples.filter((sm) => event.sampleIds.includes(sm.id))
   );
+  const updateEvent = useStore((s) => s.updateEvent);
+
+  // Локальные даты первых трёх этапов. По умолчанию — берём из startDate /
+  // endDate ивента. Когда пользователь редактирует — пишем в стор через updateEvent.
+  const initialStepDates = useMemo<Record<number, string>>(
+    () => ({
+      0: event.startDate.slice(0, 10),
+      1: event.startDate.slice(0, 10),
+      2: event.startDate.slice(0, 10),
+    }),
+    [event.startDate]
+  );
+  const [stepDates, setStepDates] =
+    useState<Record<number, string>>(initialStepDates);
+
+  useEffect(() => {
+    setStepDates(initialStepDates);
+  }, [initialStepDates]);
+
+  function setStepDate(id: number, value: string) {
+    setStepDates((s) => ({ ...s, [id]: value }));
+    if (id === 0) {
+      // Дата нулевого этапа влияет на startDate всего ивента.
+      const time = event.startDate.slice(11) || "09:00:00";
+      updateEvent(event.id, { startDate: `${value}T${time}` });
+    }
+  }
+
+  // Для отображения «следующих дат» — рассчитываем от первой даты (или
+  // последней редактируемой) и шагов, у которых задан hoursFromStart.
+  const baseDate = useMemo(() => {
+    return parseISO(`${stepDates[0]}T${event.startDate.slice(11) || "09:00:00"}`);
+  }, [stepDates, event.startDate]);
 
   return (
     <EventCardShell
@@ -108,6 +184,14 @@ export default function EventCardGermination({ event }: Props) {
           {STEPS.map((step, idx) => {
             const completed = idx < event.currentStep;
             const current = idx === event.currentStep;
+            // Заказчик: «Создать растения» только на этапе «Фиксация» (id=5),
+            // а не на любом текущем (правка 10.1).
+            const showCreatePlants = current && step.id === 5;
+            const editableDate = step.editable === true;
+            const autoDate =
+              step.hoursFromStart != null
+                ? addHours(baseDate, step.hoursFromStart)
+                : null;
             return (
               <li
                 key={step.id}
@@ -151,17 +235,22 @@ export default function EventCardGermination({ event }: Props) {
                   </div>
                   <div className="text-[11.5px] text-brand-muted">{step.note}</div>
                 </div>
-                {idx <= 2 && completed && (
-                  <span className="rounded-md border border-brand-line bg-white px-2.5 py-1 text-[11.5px] font-semibold text-brand-dark">
-                    {event.startDate.slice(0, 10)}
-                  </span>
-                )}
-                {idx > 2 && !completed && (
+                {editableDate ? (
+                  // Первые три этапа — пользовательский ввод даты (правка 10.2).
+                  <input
+                    type="date"
+                    value={stepDates[step.id] ?? ""}
+                    onChange={(e) => setStepDate(step.id, e.target.value)}
+                    className="rounded-md border border-brand-line bg-white px-2.5 py-1 text-[12px] font-semibold text-brand-deep"
+                    title="Изменить дату этапа"
+                  />
+                ) : autoDate ? (
+                  // Авто-расчёт «следующих дат» от стартовой (правка 10.4).
                   <span className="rounded-md bg-brand-mint/40 px-2.5 py-1 text-[10.5px] font-semibold uppercase text-brand-muted">
-                    Авто-расчёт
+                    Авто-расчёт · {format(autoDate, "dd.MM HH:mm")}
                   </span>
-                )}
-                {current && (
+                ) : null}
+                {showCreatePlants && (
                   <Button size="sm" variant="primary">
                     Создать растения
                   </Button>

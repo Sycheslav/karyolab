@@ -251,13 +251,15 @@ export default function SampleCard({ sample }: Props) {
               value={sample.sowingYear?.toString() ?? "—"}
             />
             <Field label="Вид" value={sample.species} />
-            <Field
-              label="Родители"
-              value={
-                sample.mother || sample.father
-                  ? `${sample.mother ?? "—"} × ${sample.father ?? "—"}`
-                  : "—"
-              }
+            <ParentField
+              label="Мать"
+              parentId={sample.mother}
+              onOpen={(id) => nav(`/журнал/образец/${id}`)}
+            />
+            <ParentField
+              label="Отец"
+              parentId={sample.father}
+              onOpen={(id) => nav(`/журнал/образец/${id}`)}
             />
             <Field label="Поколение" value={sample.generation ?? "—"} />
           </div>
@@ -570,6 +572,42 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="mt-1 rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm font-semibold text-brand-deep">
         {value}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Поле «родитель»: ссылка на образец-родителя. Если ID не задан, рендерим прочерк.
+ * Иначе — кликабельный pill, ведущий на карточку родителя (правка 6.2.3).
+ */
+function ParentField({
+  label,
+  parentId,
+  onOpen,
+}: {
+  label: string;
+  parentId?: string;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <div>
+      <div className="label-cap">{label}</div>
+      {parentId ? (
+        <button
+          onClick={() => onOpen(parentId)}
+          className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl border border-brand-line bg-white px-3 py-2.5 text-left text-sm font-semibold text-brand-deep transition hover:bg-brand-mint/40"
+          title={`Открыть образец S-${parentId}`}
+        >
+          <span>S-{parentId}</span>
+          <span className="text-[11px] uppercase tracking-wider text-brand-muted">
+            открыть
+          </span>
+        </button>
+      ) : (
+        <div className="mt-1 rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm font-semibold text-brand-deep">
+          —
+        </div>
+      )}
     </div>
   );
 }
