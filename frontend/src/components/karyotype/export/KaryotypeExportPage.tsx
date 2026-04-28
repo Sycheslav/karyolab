@@ -183,23 +183,18 @@ export default function KaryotypeExportPage() {
             isTable={template?.type === "summary_table"}
           />
           <ExportReadinessPanel readiness={readiness} blocking={blocking} />
-          <ExportPreviewMock
-            template={template}
-            karyotypes={selectedKaryotypes}
-            settings={settings}
-          />
 
-          {/* большая кнопка генерации */}
-          <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-line bg-white px-4 py-3 shadow-soft">
-            <div className="text-[12.5px] text-brand-muted">
+          {/* большая кнопка генерации — крупная и заметная */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-brand bg-brand-cream px-4 py-3 shadow-soft">
+            <div className="text-[12.5px] text-brand-deep">
               {selectedKaryotypes.length === 0
                 ? "Выберите хотя бы один кариотип"
-                : `Готовы собрать: ${selectedKaryotypes.length} кариотип(ов) · шаблон ${template?.title}`}
+                : `Готовы собрать: ${selectedKaryotypes.length} кариотип(ов) · шаблон «${template?.title}»`}
             </div>
             <button
               onClick={onGenerate}
               disabled={!canGenerate}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-3 text-[14px] font-bold text-white shadow-soft transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-[15px] font-bold text-white shadow-soft transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
             >
               {generateLabel}
               <span className="rounded bg-white/15 px-2 py-0.5 text-[11px] uppercase tracking-wider">
@@ -214,6 +209,12 @@ export default function KaryotypeExportPage() {
               templateType={template?.type as ExportTemplateType}
             />
           )}
+
+          <ExportPreviewMock
+            template={template}
+            karyotypes={selectedKaryotypes}
+            settings={settings}
+          />
         </div>
       </div>
     </div>
