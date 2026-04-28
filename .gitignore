@@ -1,0 +1,42 @@
+# OS / file explorer
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Archives / local exports
+*.zip
+*.rar
+*.7z
+
+# Obsidian local state
+**/.obsidian/workspace.json
+**/.obsidian/workspace-mobile.json
+**/.obsidian/cache/
+
+# Common build/cache folders (future-proof)
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.tsbuildinfo
