@@ -31,9 +31,26 @@ npm run preview # локально посмотреть собранный dist/
 
 ## Запуск через Docker
 
-В каталоге `karyolab_v2/frontend` уже лежит `Dockerfile` и `nginx.conf.template`:
-multi-stage сборка на Node 20, готовый `dist/` отдаёт nginx, порт берётся из
-переменной окружения `PORT`.
+Есть **два** одинаковых Dockerfile:
+
+- `karyolab_v2/Dockerfile` — корневой, контекст сборки = `karyolab_v2/`. Этот
+  используется при деплое (Railway / любой PaaS, который смотрит на корень
+  репозитория).
+- `karyolab_v2/frontend/Dockerfile` — локальный, контекст = `karyolab_v2/frontend`.
+  Удобен, когда хочется собрать только фронт.
+
+Обе сборки multi-stage на Node 20, отдают готовый `dist/` через nginx, порт
+читается из переменной окружения `PORT` (значение по умолчанию `8080`).
+
+Локально из корня `karyolab_v2/`:
+
+```bash
+cd karyolab_v2
+docker build -t karyolab-journal .
+docker run --rm -p 8080:8080 -e PORT=8080 karyolab-journal
+```
+
+Локально только из подпапки `frontend/`:
 
 ```bash
 cd karyolab_v2/frontend
@@ -47,14 +64,22 @@ Healthcheck: `GET /healthz` → `200 ok`.
 
 ## Деплой на Railway
 
-Railway сам обнаружит `Dockerfile` в `karyolab_v2/frontend`. Достаточно:
+Railway/Railpack ищет Dockerfile **в корне репозитория сервиса**. У нас в роли
+этого корня — папка `karyolab_v2/`, поэтому в ней уже лежат:
 
-1. Создать новый сервис **Empty Service → Deploy from a GitHub repo** (или
-   `railway up` из CLI), указав корнем сервиса каталог `karyolab_v2/frontend`.
-2. Railway автоматически прокидывает свою переменную `PORT` — Dockerfile уже её
-   уважает (envsubst в `nginx.conf.template`).
-3. Healthcheck path в настройках сервиса можно поставить `/healthz`.
-4. После деплоя зайти на присвоенный домен — фронт сразу откроется на
+- `Dockerfile` — корневой, копирующий из `frontend/`;
+- `.dockerignore` — отсекает `docs/`, `скрины макетов/`, `node_modules/` и т.д.;
+- `railway.json` — явно указывает Railway использовать DOCKERFILE-builder и
+  настраивает healthcheck `/healthz`.
+
+Шаги:
+
+1. В Railway создать сервис **Deploy from GitHub repo** и в настройках сервиса
+   указать **Root Directory = `karyolab_v2`** (если репозиторий шире, чем сам
+   проект). Если репозиторий = `karyolab_v2/`, то ничего настраивать не нужно.
+2. Railway автоматически прокинет переменную `PORT`. Dockerfile её уважает
+   (envsubst в `nginx.conf.template`).
+3. После деплоя зайти на присвоенный домен — фронт сразу откроется на
    `/журнал`.
 
 > Если деплоим не из CLI/GitHub, а вручную — `docker build` + `docker push` в

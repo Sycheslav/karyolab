@@ -1,0 +1,37 @@
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Документация / макеты — не нужны в образе
+docs/
+скрины макетов/
+**/*.md
+
+# Frontend локальные артефакты
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/.vite
+frontend/.cache
+frontend/coverage
+frontend/*.log
+frontend/*.local
+frontend/*.tsbuildinfo
+frontend/.env
+frontend/.env.*
+
+# Локальный Dockerfile из подпапки (используется только для локальной сборки)
+frontend/Dockerfile
+frontend/.dockerignore
+
+# Архивы и временные файлы
+*.zip
+*.rar
+*.7z
+*.tmp
+*.temp
+*.log
