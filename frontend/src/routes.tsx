@@ -8,6 +8,9 @@ import EventPage from "./pages/EventPage";
 import ArchivePage from "./pages/ArchivePage";
 import NotFound from "./pages/NotFound";
 import StubPage from "./pages/StubPage";
+import KaryotypeImportPage from "./pages/KaryotypeImportPage";
+import KaryotypePage from "./pages/KaryotypePage";
+import KaryotypeExportPage from "./pages/KaryotypeExportPage";
 
 export default function AppRoutes() {
   return (
@@ -20,24 +23,19 @@ export default function AppRoutes() {
         <Route path="журнал/ивент/:id" element={<EventPage />} />
         <Route path="журнал/образец/:id" element={<SamplePage />} />
         <Route path="журнал/архив" element={<ArchivePage />} />
+
+        <Route path="кариотип/импорт" element={<KaryotypeImportPage />} />
+        <Route path="кариотип" element={<KaryotypePage initialMode="chromosome" />} />
         <Route
-          path="кариотип"
-          element={
-            <StubPage
-              title="Кариотип"
-              note="Раздел в разработке. Здесь будет работа с фотографиями, метафазами и сборкой кариотипов."
-            />
-          }
+          path="кариотип/разметка-хромосом"
+          element={<KaryotypePage initialMode="chromosome" />}
         />
         <Route
-          path="кариотип/:sub"
-          element={
-            <StubPage
-              title="Кариотип"
-              note="Раздел в разработке. Здесь будет работа с фотографиями, метафазами и сборкой кариотипов."
-            />
-          }
+          path="кариотип/разметка-генома"
+          element={<KaryotypePage initialMode="genome" />}
         />
+        <Route path="кариотип/экспорт" element={<KaryotypeExportPage />} />
+
         <Route
           path="атлас"
           element={

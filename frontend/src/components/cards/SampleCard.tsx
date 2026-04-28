@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Preparation, Sample, StainedPreparation } from "@/lib/types";
-import { useStore } from "@/lib/store";
+import {
+  selectExportsForSample,
+  selectKaryotypesForSample,
+  useStore,
+} from "@/lib/store";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -64,6 +68,12 @@ export default function SampleCard({ sample }: Props) {
     s.preparations.filter((p) => p.sampleId === sample.id)
   );
   const stained = useStore((s) => s.stained);
+  const sampleKaryotypes = useStore((s) =>
+    selectKaryotypesForSample(s, sample.id)
+  );
+  const sampleExports = useStore((s) =>
+    selectExportsForSample(s, sample.id)
+  );
   const events = useStore((s) =>
     s.events.filter((e) =>
       "sampleId" in e
@@ -187,13 +197,39 @@ export default function SampleCard({ sample }: Props) {
             </Button>
           )}
           {sample.hasResult && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
+                }
+              >
+                <ArrowRight size={13} />
+                Открыть кариотип
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  nav(`/кариотип/экспорт?sampleId=${sample.id}`)
+                }
+              >
+                <ArrowRight size={13} />
+                Экспорт
+              </Button>
+            </>
+          )}
+          {!sample.hasResult && (
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => nav(`/кариотип`)}
+              onClick={() =>
+                nav(`/кариотип/импорт?sampleId=${sample.id}`)
+              }
             >
               <ArrowRight size={13} />
-              Открыть в Кариотипе
+              Открыть импорт
             </Button>
           )}
         </div>
@@ -273,44 +309,108 @@ export default function SampleCard({ sample }: Props) {
           <SectionTitle
             icon={<ImageIcon size={16} />}
             title="Кариотип и файлы"
-            hint="Обзорные кариотипы и связанные файлы по образцу."
+            hint="Лицевые кариотипы, экспорты обзоров и связанные файлы."
           />
-          <Button variant="outline" onClick={() => nav("/кариотип")}>
-            <Upload size={14} />
-            Открыть в Кариотипе
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {sample.hasResult ? (
-            [
-              { name: "CH-01_ALIGN.jpg", color: "from-brand-accent/30 to-brand" },
-              { name: "FL-SCAN_V2.png", color: "from-brand-deep to-brand-dark" },
-              { name: "RAW_DATA_S01.tiff", color: "from-brand to-brand-dark" },
-            ].map((it) => (
-              <div
-                key={it.name}
-                className={`relative flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-xl border border-brand-line bg-gradient-to-br ${it.color} p-2 text-[10.5px] font-semibold text-white`}
+          <div className="flex flex-wrap gap-2">
+            {sample.hasResult ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
+                  }
+                >
+                  <ImageIcon size={14} />
+                  Открыть кариотип
+                </Button>
+                <Button
+                  onClick={() =>
+                    nav(`/кариотип/экспорт?sampleId=${sample.id}`)
+                  }
+                >
+                  <Upload size={14} />
+                  Экспорт
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => nav(`/кариотип/импорт?sampleId=${sample.id}`)}
               >
-                <div className="rounded-md bg-black/40 px-1.5 py-0.5">
-                  {it.name}
+                <Upload size={14} />
+                Открыть импорт
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {sampleKaryotypes.length === 0 && sampleExports.length === 0 ? (
+          <div className="flex aspect-[4/1] items-center justify-center rounded-xl border border-dashed border-brand-line bg-brand-mint/40 p-4 text-center text-[12.5px] text-brand-muted">
+            По образцу ещё нет лицевого кариотипа. Импорт PSD → разметка хромосом → разметка генома → утверждение.
+          </div>
+        ) : (
+          <>
+            {sampleKaryotypes.length > 0 && (
+              <div className="space-y-2">
+                <div className="label-cap">Лицевые кариотипы</div>
+                {sampleKaryotypes.map((k) => (
+                  <button
+                    key={k.id}
+                    onClick={() =>
+                      nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
+                    }
+                    className="flex w-full items-center gap-3 rounded-xl border border-brand-line bg-white px-3 py-2 text-left transition hover:bg-brand-mint/40"
+                  >
+                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
+                      <ImageIcon size={16} />
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-[13px] font-bold text-brand-deep">
+                        {k.title}
+                      </div>
+                      <div className="text-[11px] text-brand-muted">
+                        {k.selectedChromosomeIds.length} хромосом · {statusLabel(k.status)}
+                        {k.main && " · основной"}
+                      </div>
+                    </div>
+                    {k.main && <Badge tone="green">main</Badge>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {sampleExports.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="label-cap">Экспорты</div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {sampleExports.map((j) => (
+                    <button
+                      key={j.id}
+                      onClick={() => nav(`/кариотип/экспорт?sampleId=${sample.id}`)}
+                      className="relative flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-xl border border-brand-line bg-gradient-to-br from-brand-deep to-brand p-2 text-[10.5px] font-semibold text-white transition hover:shadow-soft"
+                    >
+                      <div className="absolute inset-0 grid place-items-center text-[44px] font-extrabold opacity-15">
+                        {j.settings.format.toUpperCase()}
+                      </div>
+                      <div className="relative rounded-md bg-black/40 px-1.5 py-0.5 font-mono">
+                        {j.fileName}
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => toast("Добавление файла (mock)")}
+                    className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-brand-accent/60 bg-brand-mint/40 text-brand-dark transition hover:bg-brand-mint"
+                  >
+                    <Plus size={20} />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      Добавить файл
+                    </span>
+                  </button>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-2 flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-brand-line bg-brand-mint/40 p-4 text-center text-[12.5px] text-brand-muted md:col-span-3">
-              По образцу ещё нет обзорного кариотипа.
-            </div>
-          )}
-          <button
-            onClick={() => toast("Добавление файла (mock)")}
-            className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-brand-accent/60 bg-brand-mint/40 text-brand-dark transition hover:bg-brand-mint"
-          >
-            <Plus size={20} />
-            <span className="text-[11px] font-bold uppercase tracking-wider">
-              Добавить файл
-            </span>
-          </button>
-        </div>
+            )}
+          </>
+        )}
       </Card>
 
       <Card>
@@ -442,6 +542,25 @@ export default function SampleCard({ sample }: Props) {
       </Card>
     </div>
   );
+}
+
+function statusLabel(s: string): string {
+  switch (s) {
+    case "draft":
+      return "черновик";
+    case "incomplete":
+      return "неполный";
+    case "ready_for_review":
+      return "на проверку";
+    case "approved":
+      return "утверждён";
+    case "exported":
+      return "экспортирован";
+    case "archived":
+      return "архив";
+    default:
+      return s;
+  }
 }
 
 function Field({ label, value }: { label: string; value: string }) {

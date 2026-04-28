@@ -1,14 +1,23 @@
 import type {
+  ChromosomeLayer,
+  ChromosomeObject,
+  ExportJob,
+  ExportTemplate,
   FreeEvent,
+  GenomeLayout,
   GerminationEvent,
   HybridizationEvent,
+  Ideogram,
   JournalEvent,
+  KaryotypeImport,
+  Metaphase,
   Note,
   PhotographingEvent,
   Plant,
   Preparation,
   Probe,
   Sample,
+  SampleKaryotype,
   SlideEvent,
   StainedPreparation,
   TiltEntry,
@@ -144,8 +153,9 @@ export const initialSamples: Sample[] = [
     species: "T. aestivum",
     sowingYear: 2024,
     generation: "F3",
-    notes: "Созрел, но препарата ещё нет. Нужно поставить в работу.",
-    status: "registered",
+    notes:
+      "Препарат сфотографирован. Готов к импорту PSD и сборке кариотипа.",
+    status: "in_work",
     createdAt: `${yyyy - 1}-09-01`,
   },
 ];
@@ -188,6 +198,20 @@ export const initialPlants: Plant[] = [
     sampleId: "2234.12",
     name: "Растение 2234-A",
     location: "Теплица B · Лоток 03",
+    state: "used",
+  },
+  {
+    id: "P1-1730.25",
+    sampleId: "1730.25",
+    name: "Растение 1730-A",
+    location: "Теплица A · Лоток 07",
+    state: "used",
+  },
+  {
+    id: "P1-1772.01",
+    sampleId: "1772.01",
+    name: "Растение 1772-A",
+    location: "Теплица B · Лоток 06",
     state: "used",
   },
 ];
@@ -288,6 +312,30 @@ export const initialPreparations: Preparation[] = [
     box: "BX-15",
     stainCycle: 1,
   },
+  {
+    id: "SLD-1730-A",
+    sampleId: "1730.25",
+    source: { kind: "plant", plantId: "P1-1730.25" },
+    createdAt: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-12`,
+    quality: "high",
+    status: "photographed",
+    fridge: "F-04",
+    box: "BX-30",
+    stainCycle: 1,
+    comment: "Готов к разметке кариотипа.",
+  },
+  {
+    id: "SLD-1772-A",
+    sampleId: "1772.01",
+    source: { kind: "plant", plantId: "P1-1772.01" },
+    createdAt: `${yyyy - 1}-10-22`,
+    quality: "high",
+    status: "photographed",
+    fridge: "F-02",
+    box: "BX-08",
+    stainCycle: 1,
+    comment: "Полностью обработан, есть утвержденный кариотип.",
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -328,6 +376,30 @@ export const initialStained: StainedPreparation[] = [
       { name: "GAA", channel: "green" },
     ],
     hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-22`,
+    status: "photographed",
+  },
+  {
+    id: "STN-1730-A-1",
+    preparationId: "SLD-1730-A",
+    cycleNumber: 1,
+    probes: [
+      { name: "GAA", channel: "green" },
+      { name: "pAs119", channel: "red" },
+      { name: "pAs1", channel: "red" },
+    ],
+    hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-08`,
+    status: "photographed",
+  },
+  {
+    id: "STN-1772-A-1",
+    preparationId: "SLD-1772-A",
+    cycleNumber: 1,
+    probes: [
+      { name: "pAs1", channel: "red" },
+      { name: "GAA", channel: "green" },
+      { name: "DAPI", channel: "blue" },
+    ],
+    hybridizationDate: `${yyyy - 1}-10-15`,
     status: "photographed",
   },
 ];
@@ -572,3 +644,504 @@ export const initialTilts: TiltEntry[] = (() => {
   }
   return arr;
 })();
+
+/* ================================================================== */
+/* Кариотип: импорты, метафазы, хромосомы, идеограммы, layout, экспорт */
+/* ================================================================== */
+
+const KAR_DATE = `${yyyy}-${String(mm).padStart(2, "0")}-${String(
+  Math.max(1, today.getDate() - 2)
+).padStart(2, "0")}`;
+const KAR_DATE_FULL = `${KAR_DATE}T11:30:00`;
+const RESULT_DATE = `${yyyy - 1}-11-04T13:20:00`;
+
+/* ----- helpers ----- */
+
+function makeChromosomeBatch(
+  metaphaseId: string,
+  sampleId: string,
+  stainedId: string,
+  importId: string,
+  count: number,
+  /** seed for variability */
+  baseSeed: number
+): { chromosomes: ChromosomeObject[]; layers: ChromosomeLayer[] } {
+  const chromosomes: ChromosomeObject[] = [];
+  const layers: ChromosomeLayer[] = [];
+  for (let i = 0; i < count; i++) {
+    const seed = baseSeed + i * 7;
+    const sizePx = 90 + (seed % 90); // 90..180
+    const layerId = `LYR-${metaphaseId}-${String(i + 1).padStart(2, "0")}`;
+    const chromId = `CHR-${metaphaseId}-${String(i + 1).padStart(2, "0")}`;
+    layers.push({
+      id: layerId,
+      importId,
+      name: `untitled${i + 1}`,
+      temporaryName: `untitled${i + 1}`,
+      kind: "chromosome",
+      included: true,
+      maskSizePx: sizePx,
+      sizeUmPerPx: 0.1,
+      imageSeed: seed,
+    });
+    chromosomes.push({
+      id: chromId,
+      sampleId,
+      metaphaseId,
+      stainedId,
+      sourceLayerId: layerId,
+      importId,
+      temporaryName: `untitled${i + 1}`,
+      maskSizePx: sizePx,
+      imageSeed: seed,
+      bodyHue: 200 + (seed % 30),
+      redSpots: (seed >> 1) % 3,
+      greenSpots: (seed >> 2) % 4,
+      centromereHint: 0.25 + ((seed % 50) / 100),
+      status: "new",
+    });
+  }
+  return { chromosomes, layers };
+}
+
+/* ----- 1730.25: пустой импорт, готов к работе ----- */
+
+const IMPORT_1730: KaryotypeImport = {
+  id: "KIM-1730",
+  sampleId: "1730.25",
+  preparationId: "SLD-1730-A",
+  stainedId: "STN-1730-A-1",
+  psdFileName: "1730.25-GAA+pAs119+pAs1-21-112.14.psd",
+  parsedSampleId: "1730.25",
+  parsedProbes: ["GAA", "pAs119", "pAs1"],
+  parsedPhotoNumber: "21",
+  parsedCoordinates: "112.14",
+  layerIds: [],
+  status: "empty",
+  warnings: [],
+  history: [
+    {
+      id: "h1",
+      ts: KAR_DATE_FULL,
+      label: "Импорт открыт",
+      detail: "Активный выбор: S-1730.25 · STN-1730-A-1",
+      level: "info",
+    },
+  ],
+  createdAt: KAR_DATE_FULL,
+};
+
+/* ----- 2045.66: committed импорт с 10 хромосомами ----- */
+
+const META_2045 = "MET-2045-1";
+const IMPORT_2045_ID = "KIM-2045";
+const batch2045 = makeChromosomeBatch(
+  META_2045,
+  "2045.66",
+  "STN-2045-A-1",
+  IMPORT_2045_ID,
+  10,
+  31
+);
+// дать 4 идеограммы
+const IDEOGRAMS_2045: Ideogram[] = batch2045.chromosomes
+  .slice(0, 4)
+  .map((c, idx): Ideogram => {
+    const idg: Ideogram = {
+      id: `IDG-${c.id}`,
+      chromosomeId: c.id,
+      lengthPx: c.maskSizePx,
+      centromere: 0.32 + idx * 0.06,
+      signals: [
+        {
+          id: `SIG-${c.id}-r1`,
+          channel: "red",
+          kind: "point",
+          position: 0.18 + idx * 0.05,
+          size: 2,
+          probeName: "pAs1",
+        },
+        {
+          id: `SIG-${c.id}-g1`,
+          channel: "green",
+          kind: idx === 1 ? "segment" : "point",
+          position: 0.7 - idx * 0.04,
+          size: 2,
+          length: idx === 1 ? 0.12 : undefined,
+          probeName: "GAA",
+        },
+      ],
+      anomalies:
+        idx === 2
+          ? [
+              {
+                id: `ANO-${c.id}-1`,
+                type: "atypical_block",
+                position: 0.55,
+                comment: "Блок повышенной плотности",
+              },
+            ]
+          : [],
+      savedAt: KAR_DATE_FULL,
+    };
+    return {
+      ...idg,
+      savedSnapshot: {
+        centromere: idg.centromere,
+        signals: idg.signals.map((s) => ({ ...s })),
+        anomalies: idg.anomalies.map((a) => ({ ...a })),
+      },
+    };
+  });
+batch2045.chromosomes.forEach((c, idx) => {
+  if (idx < 4) {
+    c.ideogramId = `IDG-${c.id}`;
+    c.status = "has_ideogram";
+  } else if (idx < 7) {
+    c.status = "in_work";
+  }
+  // первые 6 раздадим в классы для демо genome layout
+  if (idx < 6) {
+    c.subgenome = ["A", "B", "D"][idx % 3];
+    c.chromosomeClass = (idx % 3) + 1;
+  }
+});
+const META_2045_OBJ: Metaphase = {
+  id: META_2045,
+  sampleId: "2045.66",
+  stainedId: "STN-2045-A-1",
+  psdFileName: "2045.66-pAs1+GAA-08-204.55.psd",
+  coordinates: "204.55",
+  photoNumber: "08",
+  chromosomeIds: batch2045.chromosomes.map((c) => c.id),
+  quality: "medium",
+  status: "marked",
+  comment: "Импортировано 10 объектов, идёт разметка идеограмм.",
+  createdAt: KAR_DATE_FULL,
+};
+const IMPORT_2045: KaryotypeImport = {
+  id: IMPORT_2045_ID,
+  sampleId: "2045.66",
+  preparationId: "SLD-2045-A",
+  stainedId: "STN-2045-A-1",
+  psdFileName: "2045.66-pAs1+GAA-08-204.55.psd",
+  parsedSampleId: "2045.66",
+  parsedProbes: ["pAs1", "GAA"],
+  parsedPhotoNumber: "08",
+  parsedCoordinates: "204.55",
+  metaphaseId: META_2045,
+  layerIds: batch2045.layers.map((l) => l.id),
+  status: "committed",
+  warnings: [],
+  history: [
+    {
+      id: "h1",
+      ts: KAR_DATE_FULL,
+      label: "PSD прочитан",
+      detail: "Найдено 10 хромосом и 1 фоновый слой",
+      level: "info",
+    },
+    {
+      id: "h2",
+      ts: KAR_DATE_FULL,
+      label: "Совпадение с окрашенным препаратом",
+      detail: "STN-2045-A-1 — pAs1 + GAA",
+      level: "success",
+    },
+    {
+      id: "h3",
+      ts: KAR_DATE_FULL,
+      label: "Сохранено 10 хромосом",
+      level: "success",
+    },
+  ],
+  createdAt: KAR_DATE_FULL,
+  committedAt: KAR_DATE_FULL,
+  savedChromosomeCount: 10,
+};
+const LAYOUT_2045: GenomeLayout = {
+  id: "GLY-2045-1",
+  sampleId: "2045.66",
+  level: "metaphase",
+  metaphaseId: META_2045,
+  stainedId: "STN-2045-A-1",
+  subgenomes: ["A", "B", "D"],
+  classCount: 7,
+  assignments: batch2045.chromosomes
+    .filter((c) => c.subgenome && c.chromosomeClass)
+    .map((c) => ({
+      chromosomeId: c.id,
+      subgenome: c.subgenome!,
+      chromosomeClass: c.chromosomeClass!,
+    })),
+  cells: [],
+  anomalies: [],
+  status: "draft",
+  updatedAt: KAR_DATE_FULL,
+};
+
+/* ----- 1772.01: полный готовый кариотип (для экспорта) ----- */
+
+const META_1772 = "MET-1772-1";
+const IMPORT_1772_ID = "KIM-1772";
+const batch1772 = makeChromosomeBatch(
+  META_1772,
+  "1772.01",
+  "STN-1772-A-1",
+  IMPORT_1772_ID,
+  21, // 7 классов × 3 субгенома
+  101
+);
+// разложить ровно: классы 1..7 × субгеномы A/B/D
+const SUBGENOMES_AESTIVUM = ["A", "B", "D"];
+batch1772.chromosomes.forEach((c, idx) => {
+  c.subgenome = SUBGENOMES_AESTIVUM[Math.floor(idx / 7)];
+  c.chromosomeClass = (idx % 7) + 1;
+  c.displayName = `${c.subgenome}${c.chromosomeClass}`;
+  c.status = "has_ideogram";
+  c.ideogramId = `IDG-${c.id}`;
+  c.selectedForKaryotype = true;
+  c.confidence = "high";
+});
+const IDEOGRAMS_1772: Ideogram[] = batch1772.chromosomes.map(
+  (c, idx): Ideogram => {
+    const idg: Ideogram = {
+      id: `IDG-${c.id}`,
+      chromosomeId: c.id,
+      lengthPx: c.maskSizePx,
+      centromere: 0.3 + (idx % 5) * 0.05,
+      signals: [
+        {
+          id: `SIG-${c.id}-r1`,
+          channel: "red",
+          kind: "point",
+          position: 0.2 + (idx % 7) * 0.05,
+          size: 2,
+          probeName: "pAs1",
+        },
+        {
+          id: `SIG-${c.id}-g1`,
+          channel: "green",
+          kind: idx % 4 === 0 ? "segment" : "point",
+          position: 0.65 - (idx % 5) * 0.05,
+          size: 2,
+          length: idx % 4 === 0 ? 0.08 : undefined,
+          probeName: "GAA",
+        },
+      ],
+      anomalies: [],
+      savedAt: RESULT_DATE,
+    };
+    return {
+      ...idg,
+      savedSnapshot: {
+        centromere: idg.centromere,
+        signals: idg.signals.map((s) => ({ ...s })),
+        anomalies: idg.anomalies.map((a) => ({ ...a })),
+      },
+    };
+  }
+);
+const META_1772_OBJ: Metaphase = {
+  id: META_1772,
+  sampleId: "1772.01",
+  stainedId: "STN-1772-A-1",
+  psdFileName: "1772.01-pAs1+GAA-12-088.21.psd",
+  coordinates: "088.21",
+  photoNumber: "12",
+  chromosomeIds: batch1772.chromosomes.map((c) => c.id),
+  quality: "high",
+  status: "approved",
+  createdAt: RESULT_DATE,
+};
+const IMPORT_1772: KaryotypeImport = {
+  id: IMPORT_1772_ID,
+  sampleId: "1772.01",
+  preparationId: "SLD-1772-A",
+  stainedId: "STN-1772-A-1",
+  psdFileName: "1772.01-pAs1+GAA-12-088.21.psd",
+  parsedSampleId: "1772.01",
+  parsedProbes: ["pAs1", "GAA"],
+  parsedPhotoNumber: "12",
+  parsedCoordinates: "088.21",
+  metaphaseId: META_1772,
+  layerIds: batch1772.layers.map((l) => l.id),
+  status: "committed",
+  warnings: [],
+  history: [
+    {
+      id: "h1",
+      ts: RESULT_DATE,
+      label: "PSD прочитан",
+      detail: "Найден 21 объект",
+      level: "info",
+    },
+    {
+      id: "h2",
+      ts: RESULT_DATE,
+      label: "Сохранён 21 хромосома",
+      level: "success",
+    },
+  ],
+  createdAt: RESULT_DATE,
+  committedAt: RESULT_DATE,
+  savedChromosomeCount: 21,
+};
+const LAYOUT_1772: GenomeLayout = {
+  id: "GLY-1772-1",
+  sampleId: "1772.01",
+  level: "hybridization",
+  stainedId: "STN-1772-A-1",
+  subgenomes: ["A", "B", "D"],
+  classCount: 7,
+  assignments: batch1772.chromosomes.map((c) => ({
+    chromosomeId: c.id,
+    subgenome: c.subgenome!,
+    chromosomeClass: c.chromosomeClass!,
+  })),
+  cells: [],
+  anomalies: [],
+  status: "approved",
+  updatedAt: RESULT_DATE,
+};
+const SAMPLE_KARYOTYPE_1772: SampleKaryotype = {
+  id: "SK-1772-1",
+  sampleId: "1772.01",
+  title: "Лицевой кариотип S-1772.01 · pAs1 + GAA",
+  status: "exported",
+  layoutId: LAYOUT_1772.id,
+  level: "hybridization",
+  selectedChromosomeIds: batch1772.chromosomes.map((c) => c.id),
+  main: true,
+  createdAt: RESULT_DATE,
+  approvedAt: RESULT_DATE,
+  exportIds: ["EXJ-1772-1"],
+};
+
+const EXPORT_JOB_1772: ExportJob = {
+  id: "EXJ-1772-1",
+  templateType: "standard",
+  templateId: "tpl-standard",
+  sampleIds: ["1772.01"],
+  karyotypeIds: ["SK-1772-1"],
+  settings: {
+    view: "chromosomes_with_ideograms",
+    alignByCentromere: true,
+    showProbeLabels: true,
+    showAnomalyLabels: true,
+    format: "png",
+    quality: "publication",
+  },
+  status: "done",
+  fileName: `S-1772.01_standard_overview_${yyyy - 1}-11-04.png`,
+  createdAt: RESULT_DATE,
+};
+
+/* ----- экспортные шаблоны ----- */
+
+export const initialExportTemplates: ExportTemplate[] = [
+  {
+    id: "tpl-standard",
+    type: "standard",
+    title: "Стандартный обзор",
+    description:
+      "Один образец, разметка по субгеномам и классам. Подходит для отчёта по образцу.",
+  },
+  {
+    id: "tpl-multi",
+    type: "multi_select",
+    title: "Сравнение нескольких образцов",
+    description:
+      "Сетка с подколонками по образцам. Удобно для сравнения линий.",
+  },
+  {
+    id: "tpl-free",
+    type: "free_table",
+    title: "Свободная таблица",
+    description:
+      "Произвольный выбор хромосом и порядка. Для иллюстраций к статьям.",
+  },
+  {
+    id: "tpl-summary",
+    type: "summary_table",
+    title: "Сводная таблица",
+    description:
+      "Образец, число хромосом, зонды, аномалии. Без изображений.",
+  },
+];
+
+/* ----- сборка коллекций ----- */
+
+export const initialKaryotypeImports: KaryotypeImport[] = [
+  IMPORT_1730,
+  IMPORT_2045,
+  IMPORT_1772,
+];
+
+export const initialChromosomeLayers: ChromosomeLayer[] = [
+  ...batch2045.layers,
+  ...batch1772.layers,
+];
+
+export const initialMetaphases: Metaphase[] = [META_2045_OBJ, META_1772_OBJ];
+
+export const initialChromosomes: ChromosomeObject[] = [
+  ...batch2045.chromosomes,
+  ...batch1772.chromosomes,
+];
+
+export const initialIdeograms: Ideogram[] = [
+  ...IDEOGRAMS_2045,
+  ...IDEOGRAMS_1772,
+];
+
+export const initialGenomeLayouts: GenomeLayout[] = [LAYOUT_2045, LAYOUT_1772];
+
+export const initialSampleKaryotypes: SampleKaryotype[] = [SAMPLE_KARYOTYPE_1772];
+
+export const initialExportJobs: ExportJob[] = [EXPORT_JOB_1772];
+
+/** Демонстрационный список слоёв, который будет «прочитан» из PSD для 1730.25. */
+export const DEMO_PSD_LAYERS_1730: ChromosomeLayer[] = (() => {
+  const importId = IMPORT_1730.id;
+  const layers: ChromosomeLayer[] = [];
+  for (let i = 0; i < 8; i++) {
+    const seed = 51 + i * 11;
+    layers.push({
+      id: `LYR-DEMO-1730-${String(i + 1).padStart(2, "0")}`,
+      importId,
+      name: `untitled${i + 1}`,
+      temporaryName: `untitled${i + 1}`,
+      kind: "chromosome",
+      included: true,
+      maskSizePx: 95 + (seed % 95),
+      sizeUmPerPx: 0.1,
+      imageSeed: seed,
+    });
+  }
+  layers.push({
+    id: "LYR-DEMO-1730-BG",
+    importId,
+    name: "background",
+    temporaryName: "background",
+    kind: "background",
+    included: false,
+    maskSizePx: 0,
+    imageSeed: 0,
+    warnings: ["служебный фон, исключаем из импорта"],
+  });
+  layers.push({
+    id: "LYR-DEMO-1730-EMPTY",
+    importId,
+    name: "empty_mask",
+    temporaryName: "empty_mask",
+    kind: "empty",
+    included: false,
+    maskSizePx: 0,
+    imageSeed: 0,
+    warnings: ["пустой слой без маски"],
+  });
+  return layers;
+})();
+
+export const DEMO_PSD_FILE_1730 = "1730.25-GAA+pAs119+pAs1-21-112.14.psd";

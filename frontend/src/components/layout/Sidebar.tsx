@@ -8,6 +8,7 @@ import {
   FileInput,
   Layers,
   Download,
+  Grid3x3,
 } from "lucide-react";
 import { useState } from "react";
 import { classNames } from "@/lib/utils";
@@ -34,6 +35,7 @@ export default function Sidebar() {
     );
 
   const journalActive = loc.pathname.startsWith("/журнал");
+  const karyoActive = loc.pathname.startsWith("/кариотип");
 
   return (
     <aside className="sticky top-0 flex h-screen w-[210px] shrink-0 flex-col border-r border-brand-line bg-white">
@@ -66,8 +68,16 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => setKaryoOpen((o) => !o)}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-brand-deep/80 hover:bg-brand-cream/60"
+          className={classNames(
+            "relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-semibold transition",
+            karyoActive
+              ? "bg-brand-cream text-brand-deep"
+              : "text-brand-deep/80 hover:bg-brand-cream/60"
+          )}
         >
+          {karyoActive && (
+            <span className="absolute -left-3 top-1.5 h-7 w-1 rounded-r bg-brand" />
+          )}
           <Microscope size={16} className="text-brand-dark" />
           Кариотип
           <ChevronDown
@@ -83,8 +93,11 @@ export default function Sidebar() {
             <NavLink to="/кариотип/импорт" className={subLinkClass}>
               <FileInput size={14} /> Импорт
             </NavLink>
-            <NavLink to="/кариотип" end className={subLinkClass}>
-              <Layers size={14} /> Кариотип
+            <NavLink to="/кариотип/разметка-хромосом" className={subLinkClass}>
+              <Layers size={14} /> Разметка хромосом
+            </NavLink>
+            <NavLink to="/кариотип/разметка-генома" className={subLinkClass}>
+              <Grid3x3 size={14} /> Разметка генома
             </NavLink>
             <NavLink to="/кариотип/экспорт" className={subLinkClass}>
               <Download size={14} /> Экспорт

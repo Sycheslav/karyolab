@@ -4,7 +4,7 @@ import Badge from "@/components/ui/Badge";
 import { useStore } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import type { PhotographingEvent } from "@/lib/types";
-import { Refrigerator, AlertTriangle, ArrowRight } from "lucide-react";
+import { Refrigerator, AlertTriangle, ArrowRight, FileInput } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 interface Props {
@@ -83,6 +83,27 @@ export default function EventCardPhoto({ event }: Props) {
               >
                 <ArrowRight size={13} />
                 Поставить новую гибридизацию
+              </Button>
+            )}
+            {total > 0 && (
+              <Button
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => {
+                  const first = event.stainedDecisions[0];
+                  const st = stained.find((x) => x.id === first.stainedId);
+                  const prep = preps.find((p) => p.id === st?.preparationId);
+                  const qs = new URLSearchParams();
+                  if (st) qs.set("stainedId", st.id);
+                  if (prep) {
+                    qs.set("sampleId", prep.sampleId);
+                    qs.set("prepId", prep.id);
+                  }
+                  nav(`/кариотип/импорт?${qs.toString()}`);
+                }}
+              >
+                <FileInput size={13} />
+                Открыть импорт фото
               </Button>
             )}
           </Card>

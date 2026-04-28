@@ -209,3 +209,291 @@ export interface ChangeRecord {
   detail?: string;
   href?: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* Кариотип                                                            */
+/* ------------------------------------------------------------------ */
+
+export type KaryotypeImportStatus =
+  | "empty"
+  | "preview"
+  | "warning"
+  | "committed"
+  | "error";
+
+export type ChromosomeStatus =
+  | "new"
+  | "in_work"
+  | "classed"
+  | "has_ideogram"
+  | "candidate"
+  | "selected"
+  | "doubtful"
+  | "excluded";
+
+export type KaryotypeLevel = "metaphase" | "hybridization";
+
+export type SignalChannel = "red" | "green" | "blue";
+
+export type SignalKind = "point" | "large_point" | "block" | "segment";
+
+export type AnomalyType =
+  | "trisomy"
+  | "aneuploidy"
+  | "monosomy"
+  | "nullisomy"
+  | "substitution"
+  | "translocation"
+  | "atypical_block"
+  | "missing_signal"
+  | "foreign_material"
+  | "doubtful";
+
+export type SampleKaryotypeStatus =
+  | "draft"
+  | "incomplete"
+  | "ready_for_review"
+  | "approved"
+  | "exported"
+  | "archived";
+
+export type ExportTemplateType =
+  | "standard"
+  | "multi_select"
+  | "free_table"
+  | "summary_table";
+
+export type ExportFormat = "png" | "pdf";
+
+export type ChromosomeLayerKind =
+  | "chromosome"
+  | "background"
+  | "garbage"
+  | "empty";
+
+export interface ImportHistoryStep {
+  id: string;
+  ts: string;
+  label: string;
+  detail?: string;
+  level?: "info" | "warning" | "error" | "success";
+}
+
+export interface ImportWarning {
+  id: string;
+  kind: "probe_conflict" | "duplicate_file" | "service_layers" | "no_layers";
+  title: string;
+  description?: string;
+  acknowledged?: boolean;
+  blocking?: boolean;
+}
+
+export interface ChromosomeLayer {
+  id: string;
+  importId: string;
+  name: string;
+  temporaryName: string;
+  kind: ChromosomeLayerKind;
+  included: boolean;
+  maskSizePx: number;
+  sizeUmPerPx?: number;
+  warnings?: string[];
+  /** Псевдо-сид для отрисовки превью. */
+  imageSeed: number;
+}
+
+export interface KaryotypeImport {
+  id: string;
+  sampleId?: string;
+  preparationId?: string;
+  stainedId?: string;
+  psdFileName: string;
+  parsedSampleId?: string;
+  parsedProbes?: string[];
+  parsedPhotoNumber?: string;
+  parsedCoordinates?: string;
+  metaphaseId?: string;
+  layerIds: string[];
+  status: KaryotypeImportStatus;
+  warnings: ImportWarning[];
+  history: ImportHistoryStep[];
+  createdAt: string;
+  committedAt?: string;
+  /** Сколько хромосом сохранено по результату commit. */
+  savedChromosomeCount?: number;
+}
+
+export interface Metaphase {
+  id: string;
+  sampleId: string;
+  stainedId: string;
+  psdFileName: string;
+  /** Координаты на стекле (например "21-112.14"). */
+  coordinates?: string;
+  photoNumber?: string;
+  chromosomeIds: string[];
+  quality: Quality;
+  status: "new" | "marked" | "approved";
+  comment?: string;
+  createdAt: string;
+}
+
+export interface IdeogramSignal {
+  id: string;
+  channel: SignalChannel;
+  kind: SignalKind;
+  /** Позиция от 0 до 1 вдоль длины хромосомы. */
+  position: number;
+  /** Для отрезков — размер вдоль хромосомы (доля от длины). */
+  length?: number;
+  /** Размер точки 1..4. */
+  size?: number;
+  comment?: string;
+  probeName?: string;
+}
+
+export interface IdeogramAnomaly {
+  id: string;
+  type: AnomalyType;
+  position: number;
+  comment?: string;
+}
+
+export interface Ideogram {
+  id: string;
+  chromosomeId: string;
+  lengthPx: number;
+  /** Положение центромеры от 0 до 1 (от вершины p-плеча). */
+  centromere?: number;
+  signals: IdeogramSignal[];
+  anomalies: IdeogramAnomaly[];
+  savedAt: string;
+  /** Признак несохранённых правок относительно последнего save. */
+  dirty?: boolean;
+  /** Снимок состояния, к которому возвращаемся при «отменить правки». */
+  savedSnapshot?: {
+    centromere?: number;
+    signals: IdeogramSignal[];
+    anomalies: IdeogramAnomaly[];
+  };
+}
+
+export interface ChromosomeObject {
+  id: string;
+  sampleId: string;
+  metaphaseId: string;
+  stainedId: string;
+  sourceLayerId: string;
+  importId: string;
+  temporaryName: string;
+  displayName?: string;
+  maskSizePx: number;
+  imageSeed: number;
+  /** Цвет тела хромосомы для mock-превью (DAPI, etc.) */
+  bodyHue?: number;
+  /** Подсчёт сигналов в исходной фотографии (для генерации миниатюры). */
+  redSpots?: number;
+  greenSpots?: number;
+  centromereHint?: number; // 0..1
+  subgenome?: string; // A, B, D, R, U, ...
+  chromosomeClass?: number; // 1..7
+  confidence?: "low" | "medium" | "high";
+  status: ChromosomeStatus;
+  ideogramId?: string;
+  anomalyIds?: string[];
+  selectedForKaryotype?: boolean;
+  comment?: string;
+  excludeReason?: string;
+}
+
+export interface GenomeAssignment {
+  /** id хромосомы */
+  chromosomeId: string;
+  subgenome: string;
+  chromosomeClass: number;
+}
+
+export type GenomeCellStatus =
+  | "empty"
+  | "monosomy"
+  | "normal"
+  | "trisomy"
+  | "nullisomy"
+  | "substitution"
+  | "doubtful";
+
+export interface GenomeCellMeta {
+  subgenome: string;
+  chromosomeClass: number;
+  status: GenomeCellStatus;
+  comment?: string;
+  confirmed?: boolean;
+}
+
+export interface GenomeAnomaly {
+  id: string;
+  type: AnomalyType;
+  subgenome?: string;
+  chromosomeClass?: number;
+  comment?: string;
+}
+
+export interface GenomeLayout {
+  id: string;
+  sampleId: string;
+  level: KaryotypeLevel;
+  metaphaseId?: string;
+  stainedId?: string;
+  /** Список колонок (субгеномов) — упорядоченный, с возможностью добавлять. */
+  subgenomes: string[];
+  /** Сколько строк (классов хромосом) в матрице. По умолчанию 7. */
+  classCount: number;
+  assignments: GenomeAssignment[];
+  cells: GenomeCellMeta[];
+  anomalies: GenomeAnomaly[];
+  status: "draft" | "ready_for_review" | "approved";
+  updatedAt: string;
+}
+
+export interface SampleKaryotype {
+  id: string;
+  sampleId: string;
+  title: string;
+  status: SampleKaryotypeStatus;
+  layoutId: string;
+  level: KaryotypeLevel;
+  selectedChromosomeIds: string[];
+  /** Метка «лицевой кариотип образца» — основной для образца. */
+  main?: boolean;
+  createdAt: string;
+  approvedAt?: string;
+  exportIds: string[];
+}
+
+export interface ExportTemplate {
+  id: string;
+  type: ExportTemplateType;
+  title: string;
+  description: string;
+}
+
+export interface ExportSettings {
+  view: "chromosomes" | "chromosomes_with_ideograms" | "ideograms_only";
+  alignByCentromere: boolean;
+  showProbeLabels: boolean;
+  showAnomalyLabels: boolean;
+  format: ExportFormat;
+  quality: "draft" | "publication";
+}
+
+export interface ExportJob {
+  id: string;
+  templateType: ExportTemplateType;
+  templateId: string;
+  sampleIds: string[];
+  karyotypeIds: string[];
+  settings: ExportSettings;
+  status: "ready" | "generating" | "done" | "error";
+  fileName?: string;
+  createdAt: string;
+}

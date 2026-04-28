@@ -115,7 +115,21 @@ export default function ProgressLifecycle() {
         title: "Сфотографирован",
         count: buckets.photographed.length,
         items: buckets.photographed.slice(0, 3).map(prepItem),
-        action: { label: "Открыть в Кариотипе", href: "/кариотип" },
+        action: {
+          label: "Открыть импорт фото",
+          href: (() => {
+            const first = buckets.photographed[0];
+            if (!first) return "/кариотип/импорт";
+            const lastStn = stained
+              .filter((s) => s.preparationId === first.id)
+              .sort((a, b) => b.cycleNumber - a.cycleNumber)[0];
+            const qs = new URLSearchParams();
+            qs.set("sampleId", first.sampleId);
+            qs.set("prepId", first.id);
+            if (lastStn) qs.set("stainedId", lastStn.id);
+            return `/кариотип/импорт?${qs.toString()}`;
+          })(),
+        },
       },
       {
         id: "result",
