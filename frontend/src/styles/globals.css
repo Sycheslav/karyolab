@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #008236;
+  --brand-dark: #004d3a;
+  --brand-deep: #0b3d34;
+  --brand-mint: #eafaf3;
+  --brand-cream: #dff7ed;
+  --brand-accent: #00e0aa;
+  --brand-line: #cfe7dc;
+  --brand-muted: #6b817a;
+  --brand-warn: #f6a623;
+  --brand-danger: #e5484d;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial,
+    sans-serif;
+  background-color: var(--brand-mint);
+  color: var(--brand-deep);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* small scrollbar polish */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #cfe7dc;
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .label-cap {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-brand-muted;
+  }
+  .field {
+    @apply w-full rounded-xl border border-brand-line bg-white px-3.5 py-2.5 text-sm text-brand-deep placeholder:text-brand-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+  .card {
+    @apply rounded-2xl border border-brand-line bg-white shadow-card;
+  }
+  .card-pad {
+    @apply p-5;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full border border-brand-line bg-brand-cream px-2.5 py-1 text-xs font-medium text-brand-dark;
+  }
+  .heading-page {
+    @apply text-[28px] font-extrabold leading-tight text-brand-deep;
+  }
+  .text-muted {
+    @apply text-brand-muted;
+  }
+  .divider {
+    @apply h-px w-full bg-brand-line;
+  }
+}
