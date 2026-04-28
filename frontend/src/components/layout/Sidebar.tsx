@@ -39,9 +39,35 @@ export default function Sidebar() {
 
   return (
     <aside className="sticky top-0 flex h-screen w-[210px] shrink-0 flex-col border-r border-brand-line bg-white">
-      <div className="px-5 pt-5 pb-2">
-        <div className="select-none font-brand text-[36px] leading-none text-brand-dark">
-          Soft <span className="text-brand">♥</span>
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-center gap-2.5 select-none">
+          {/* Логотип: стилизованная хромосома (X-форма с центромерой) в фирменном
+              зелёном круге. Заменяет временную заглушку «Soft ♥». */}
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white shadow-soft">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 3c1.6 2.6 3.6 5.5 6 9 2.4 3.5 4.4 6.4 6 9" />
+              <path d="M18 3c-1.6 2.6-3.6 5.5-6 9-2.4 3.5-4.4 6.4-6 9" />
+              <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <div className="leading-tight">
+            <div className="font-brand text-[20px] font-extrabold text-brand-deep">
+              Karyolab
+            </div>
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-brand-muted">
+              v2
+            </div>
+          </div>
         </div>
       </div>
 
