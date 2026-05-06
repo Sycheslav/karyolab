@@ -48,14 +48,25 @@ export default function ExportSettingsPanel({
 
         <div>
           <div className="label-cap mb-1.5">Формат</div>
-          <div className="flex gap-1.5">
-            {(["png", "pdf"] as ExportFormat[]).map((f) => (
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              isTable
+                ? ([
+                    ["excel", "Excel"],
+                    ["text", "Text"],
+                  ] as [ExportFormat, string][])
+                : ([
+                    ["tiff", "TIFF"],
+                    ["excel", "Excel"],
+                    ["text", "Text"],
+                  ] as [ExportFormat, string][])
+            ).map(([id, label]) => (
               <Pill
-                key={f}
-                active={settings.format === f}
-                onClick={() => set("format", f)}
+                key={id}
+                active={settings.format === id}
+                onClick={() => set("format", id)}
               >
-                {f.toUpperCase()}
+                {label}
               </Pill>
             ))}
           </div>

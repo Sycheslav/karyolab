@@ -5,11 +5,15 @@ import {
   ArchiveIcon,
   Calendar,
   ChevronDown,
+  GitCompare,
   Image as ImageIcon,
+  LayoutGrid,
+  Network,
   Pencil,
   Plus,
   Sprout,
   Layers,
+  TestTube,
   TreePine,
   Upload,
   ArrowRight,
@@ -18,7 +22,8 @@ import toast from "react-hot-toast";
 import type { Preparation, Sample, StainedPreparation } from "@/lib/types";
 import {
   selectExportsForSample,
-  selectKaryotypesForSample,
+  selectMetaphaseKaryotypesForSample,
+  selectSampleKaryotypesOnly,
   useStore,
 } from "@/lib/store";
 import Card from "@/components/ui/Card";
@@ -39,6 +44,7 @@ const sampleStatusLabel: Record<Sample["status"], string> = {
   germinating: "Проращивается",
   in_work: "В работе",
   result: "Есть результат",
+  archived: "Архивный",
 };
 
 const prepStatusLabel: Record<Preparation["status"], string> = {
@@ -46,14 +52,15 @@ const prepStatusLabel: Record<Preparation["status"], string> = {
   pre_washed: "Предгиб. отмыт",
   hybridized: "Гибридизован",
   photographed: "Сфотографирован",
-  rehyb_ready: "Готов к повторной гибридизации",
+  photographed_undecided: "Сфотографирован, судьба не решена",
+  rehyb_ready: "Переотмыт",
   discarded: "Выброшен",
 };
 
 const prepStatusTone = (s: Preparation["status"]) =>
   s === "discarded"
     ? "red"
-    : s === "photographed"
+    : s === "photographed" || s === "photographed_undecided"
       ? "dark"
       : s === "hybridized"
         ? "green"
@@ -69,7 +76,10 @@ export default function SampleCard({ sample }: Props) {
   );
   const stained = useStore((s) => s.stained);
   const sampleKaryotypes = useStore((s) =>
-    selectKaryotypesForSample(s, sample.id)
+    selectSampleKaryotypesOnly(s, sample.id)
+  );
+  const metaphaseKaryotypes = useStore((s) =>
+    selectMetaphaseKaryotypesForSample(s, sample.id)
   );
   const sampleExports = useStore((s) =>
     selectExportsForSample(s, sample.id)
@@ -202,7 +212,7 @@ export default function SampleCard({ sample }: Props) {
                 size="sm"
                 variant="secondary"
                 onClick={() =>
-                  nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
+                  nav(`/кариотип/разметка/геном?sampleId=${sample.id}`)
                 }
               >
                 <ArrowRight size={13} />
@@ -231,6 +241,54 @@ export default function SampleCard({ sample }: Props) {
               <ArrowRight size={13} />
               Открыть импорт
             </Button>
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-brand-line bg-brand-mint/30 p-3">
+          <span className="label-cap">Атлас</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => nav(`/атлас/матрица?sampleId=${sample.id}`)}
+          >
+            <LayoutGrid size={13} /> Открыть в матрице
+          </Button>
+          {(sample.mother || sample.father) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                nav(`/атлас/сравнение?scenario=siblings&sampleId=${sample.id}`)
+              }
+            >
+              <Network size={13} /> Сиблинги
+            </Button>
+          )}
+          {sampleKaryotypes.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  nav(
+                    `/атлас/сравнение?scenario=vs_reference&karyotypeId=${sampleKaryotypes[0].id}`
+                  )
+                }
+              >
+                <GitCompare size={13} /> Сравнить с эталоном
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  nav(
+                    `/атлас/сравнение?scenario=preparations&sampleId=${sample.id}`
+                  )
+                }
+              >
+                <TestTube size={13} /> Сравнить препараты
+              </Button>
+            </>
           )}
         </div>
       </Card>
@@ -319,7 +377,7 @@ export default function SampleCard({ sample }: Props) {
                 <Button
                   variant="outline"
                   onClick={() =>
-                    nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
+                    nav(`/кариотип/разметка/геном?sampleId=${sample.id}`)
                   }
                 >
                   <ImageIcon size={14} />
@@ -346,38 +404,73 @@ export default function SampleCard({ sample }: Props) {
           </div>
         </div>
 
-        {sampleKaryotypes.length === 0 && sampleExports.length === 0 ? (
+        {sampleKaryotypes.length === 0 &&
+        metaphaseKaryotypes.length === 0 &&
+        sampleExports.length === 0 ? (
           <div className="flex aspect-[4/1] items-center justify-center rounded-xl border border-dashed border-brand-line bg-brand-mint/40 p-4 text-center text-[12.5px] text-brand-muted">
-            По образцу ещё нет лицевого кариотипа. Импорт PSD → разметка хромосом → разметка генома → утверждение.
+            По образцу ещё нет кариотипа. Импорт PSD → разметка хромосом → разметка генома → утверждение кариотипа образца.
           </div>
         ) : (
           <>
             {sampleKaryotypes.length > 0 && (
               <div className="space-y-2">
-                <div className="label-cap">Лицевые кариотипы</div>
-                {sampleKaryotypes.map((k) => (
-                  <button
-                    key={k.id}
-                    onClick={() =>
-                      nav(`/кариотип/разметка-генома?sampleId=${sample.id}`)
-                    }
-                    className="flex w-full items-center gap-3 rounded-xl border border-brand-line bg-white px-3 py-2 text-left transition hover:bg-brand-mint/40"
-                  >
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
-                      <ImageIcon size={16} />
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-[13px] font-bold text-brand-deep">
-                        {k.title}
+                <div className="label-cap">Кариотипы образца</div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {sampleKaryotypes.map((k) => (
+                    <button
+                      key={k.id}
+                      onClick={() =>
+                        nav(`/кариотип/разметка/геном?sampleId=${sample.id}`)
+                      }
+                      className="flex items-center gap-3 rounded-xl border border-brand-line bg-white px-3 py-2 text-left transition hover:bg-brand-mint/40"
+                    >
+                      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
+                        <ImageIcon size={16} />
+                      </span>
+                      <div className="flex-1">
+                        <div className="text-[13px] font-bold text-brand-deep">
+                          {k.title}
+                        </div>
+                        <div className="text-[11px] text-brand-muted">
+                          {k.selectedChromosomeIds.length} хромосом ·{" "}
+                          {statusLabel(k.status)}
+                          {k.main && " · основной"}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-brand-muted">
-                        {k.selectedChromosomeIds.length} хромосом · {statusLabel(k.status)}
-                        {k.main && " · основной"}
+                      {k.main && <Badge tone="green">основной</Badge>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {metaphaseKaryotypes.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="label-cap">Кариотипы метафаз</div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {metaphaseKaryotypes.map((k) => (
+                    <button
+                      key={k.id}
+                      onClick={() =>
+                        nav(`/кариотип/разметка/геном?sampleId=${sample.id}`)
+                      }
+                      className="flex items-center gap-3 rounded-xl border border-brand-line bg-white px-3 py-2 text-left transition hover:bg-brand-mint/40"
+                    >
+                      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-deep text-white">
+                        <ImageIcon size={16} />
+                      </span>
+                      <div className="flex-1">
+                        <div className="text-[13px] font-bold text-brand-deep">
+                          {k.title}
+                        </div>
+                        <div className="text-[11px] text-brand-muted">
+                          {k.selectedChromosomeIds.length} хромосом ·{" "}
+                          {statusLabel(k.status)}
+                        </div>
                       </div>
-                    </div>
-                    {k.main && <Badge tone="green">main</Badge>}
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

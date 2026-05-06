@@ -78,7 +78,7 @@ export default function KaryotypePage({ initialMode }: Props) {
   }, [allChroms]);
 
   const onSwitchMode = (id: string) => {
-    const sub = id === "genome" ? "разметка-генома" : "разметка-хромосом";
+    const sub = id === "genome" ? "разметка/геном" : "разметка";
     const qs = new URLSearchParams();
     if (ctx.sampleId) qs.set("sampleId", ctx.sampleId);
     if (ctx.stainedId) qs.set("stainedId", ctx.stainedId);

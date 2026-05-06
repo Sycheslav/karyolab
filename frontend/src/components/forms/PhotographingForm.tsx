@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { AlertOctagon, Camera, Info, Search } from "lucide-react";
+import { AlertOctagon, Camera, Clock, Info, Search } from "lucide-react";
 import { useStore } from "@/lib/store";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -11,6 +11,7 @@ import Badge from "@/components/ui/Badge";
 import Toggle from "@/components/ui/Toggle";
 import StorageFields from "./StorageFields";
 import { classNames } from "@/lib/utils";
+import type { StainFate } from "@/lib/types";
 
 interface Props {
   defaultDate?: string;
@@ -19,7 +20,9 @@ interface Props {
 export default function PhotographingForm({ defaultDate }: Props) {
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const addEvent = useStore((s) => s.addEvent);
+  const createPhotographingEvent = useStore(
+    (s) => s.createPhotographingEvent
+  );
   const stained = useStore((s) => s.stained);
   const preps = useStore((s) => s.preparations);
 
@@ -31,7 +34,7 @@ export default function PhotographingForm({ defaultDate }: Props) {
 
   const [search, setSearch] = useState("");
   const [batchName, setBatchName] = useState(
-    `PHOTO-${new Date().getFullYear()}-${String(
+    `Сессия ${new Date().getFullYear()}-${String(
       new Date().getMonth() + 1
     ).padStart(2, "0")}`
   );
@@ -40,7 +43,7 @@ export default function PhotographingForm({ defaultDate }: Props) {
   );
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [decisions, setDecisions] = useState<
-    Record<string, { fate: "washed" | "discarded"; fridge: string; box: string }>
+    Record<string, { fate: StainFate; fridge: string; box: string }>
   >({});
 
   // Поддержка предвыбора ?prep=ID,... — пытаемся найти окрашенные препараты
@@ -79,64 +82,40 @@ export default function PhotographingForm({ defaultDate }: Props) {
   const discardCount = queue.filter(
     (e) => decisions[e.id]?.fate === "discarded"
   ).length;
+  const undecidedCount = queue.filter(
+    (e) => decisions[e.id]?.fate === "undecided"
+  ).length;
 
   function save() {
     if (queue.length === 0) {
       toast.error("Выберите окрашенные препараты для фотографирования");
       return;
     }
-    // Проверим, что у всех «отмыт» есть новое место хранения
+    // Проверим, что у всех «отмыт» есть новое место хранения.
+    // Для «решу позже» новое место хранения не требуется — оно остаётся текущим.
     const missing = queue
       .filter((e) => (decisions[e.id]?.fate ?? "washed") === "washed")
       .filter((e) => !(decisions[e.id]?.fridge && decisions[e.id]?.box));
     if (missing.length > 0) {
-      toast.error("Укажите новое место хранения для постгибридизационно отмытых");
+      toast.error(
+        "Укажите новое место хранения для постгибридизационно отмытых"
+      );
       return;
     }
-    const id = `EV-PHOTO-${Date.now()}`;
-    addEvent(
-      {
-        id,
-        type: "photographing",
-        title: `Фотографирование · Сессия ${batchName}`,
-        stainedDecisions: queue.map((e) => ({
-          stainedId: e.id,
-          fate: decisions[e.id]?.fate ?? "washed",
-          newFridge: decisions[e.id]?.fridge,
-          newBox: decisions[e.id]?.box,
-        })),
-        startDate: `${date}T09:15:00`,
-        endDate: `${date}T11:45:00`,
-        operator: "Лаборант",
-        status: "completed",
-        createdAt: new Date().toISOString(),
-      },
-      [
-        {
-          ts: new Date().toISOString(),
-          title: `Сфотографировано окрашиваний: ${queue.length}`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title: `Готовы к повторной гибридизации: ${washCount}`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title: `Выброшены: ${discardCount}`,
-        },
-        ...(washCount > 0
-          ? [
-              {
-                ts: new Date().toISOString(),
-                title: "Можно поставить новую гибридизацию",
-                href: "/журнал/новый-ивент?type=hybridization",
-              },
-            ]
-          : []),
-      ]
-    );
+    const { eventId } = createPhotographingEvent({
+      decisions: queue.map((e) => ({
+        stainedId: e.id,
+        fate: decisions[e.id]?.fate ?? "washed",
+        newFridge: decisions[e.id]?.fridge,
+        newBox: decisions[e.id]?.box,
+      })),
+      operator: "Лаборант",
+      comment: batchName,
+      startDate: `${date}T09:15:00`,
+      endDate: `${date}T11:45:00`,
+    });
     toast.success("Ивент сохранён");
-    nav(`/журнал/ивент/${id}`);
+    nav(`/журнал/ивент/${eventId}`);
   }
 
   return (
@@ -272,11 +251,12 @@ export default function PhotographingForm({ defaultDate }: Props) {
             )}
             {queue.map((e) => {
               const dec = decisions[e.id] ?? {
-                fate: "washed" as const,
+                fate: "washed" as StainFate,
                 fridge: "",
                 box: "",
               };
               const isDiscard = dec.fate === "discarded";
+              const isUndecided = dec.fate === "undecided";
               return (
                 <div
                   key={e.id}
@@ -284,7 +264,9 @@ export default function PhotographingForm({ defaultDate }: Props) {
                     "rounded-xl border bg-white p-4 transition",
                     isDiscard
                       ? "border-brand-danger/40 bg-brand-danger/5"
-                      : "border-brand-line"
+                      : isUndecided
+                        ? "border-amber-300/60 bg-amber-50/50"
+                        : "border-brand-line"
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -304,12 +286,13 @@ export default function PhotographingForm({ defaultDate }: Props) {
                       onChange={(v) =>
                         setDecisions((d) => ({
                           ...d,
-                          [e.id]: { ...dec, fate: v as "washed" | "discarded" },
+                          [e.id]: { ...dec, fate: v as StainFate },
                         }))
                       }
                       variant="danger"
                       options={[
-                        { id: "washed", label: "Постгиб. отмыт" },
+                        { id: "washed", label: "Переотмыт" },
+                        { id: "undecided", label: "Решу позже" },
                         { id: "discarded", label: "Выброшен" },
                       ]}
                     />
@@ -326,12 +309,26 @@ export default function PhotographingForm({ defaultDate }: Props) {
                         </div>
                       </div>
                     </div>
+                  ) : isUndecided ? (
+                    <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-amber-900">
+                      <Clock size={15} className="mt-0.5" />
+                      <div className="text-[12.5px]">
+                        <div className="font-bold">
+                          Сфотографирован, судьба не решена
+                        </div>
+                        <div className="text-amber-900/80">
+                          Стекло остаётся в текущем месте хранения. Решение
+                          («переотмыт» или «выброшен») можно будет принять
+                          позже из карточки препарата без нового ивента.
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="mt-3">
                       <div className="mb-2 flex items-center gap-2 text-[11.5px] text-brand-deep">
                         <Info size={13} className="text-brand-dark" />
-                        Стекло станет «готов к повторной гибридизации».
-                        Укажите новое место хранения.
+                        Стекло станет «переотмыт» (готов к повторной
+                        гибридизации). Укажите новое место хранения.
                       </div>
                       <StorageFields
                         fridge={dec.fridge}
@@ -383,11 +380,15 @@ export default function PhotographingForm({ defaultDate }: Props) {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-brand-muted">
-                  Готовы к повторной гибридизации
-                </span>
+                <span className="text-brand-muted">Переотмыты</span>
                 <span className="font-bold text-brand-deep">
                   {String(washCount).padStart(2, "0")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-brand-muted">Решу позже</span>
+                <span className="font-bold text-amber-700">
+                  {String(undecidedCount).padStart(2, "0")}
                 </span>
               </div>
               <div className="flex items-center justify-between">

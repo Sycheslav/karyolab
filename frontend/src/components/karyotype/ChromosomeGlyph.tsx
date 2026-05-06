@@ -117,7 +117,7 @@ export default function ChromosomeGlyph({
             : s.channel === "green"
               ? "bg-emerald-400"
               : "bg-blue-400";
-        if (s.kind === "segment" || s.kind === "block") {
+        if (s.kind === "segment") {
           const lenPx = Math.max(4, (s.length ?? 0.05) * h);
           return (
             <div

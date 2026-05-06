@@ -75,9 +75,8 @@ export default function ProgressLifecycle() {
       };
     };
 
-    // Заранее посчитаем историю окрасок для всех препаратов в группах rehyb.
     const historyByPrep = new Map<string, StainedPreparation[]>();
-    for (const p of buckets.postHybWashed) {
+    for (const p of buckets.washed.rehybReady) {
       historyByPrep.set(
         p.id,
         stained
@@ -86,28 +85,26 @@ export default function ProgressLifecycle() {
       );
     }
 
-    const createdIds = buckets.created.map((p) => p.id).join(",");
-    const washedIds = [...buckets.primaryWashed, ...buckets.postHybWashed]
-      .map((p) => p.id)
-      .join(",");
+    const createdIds = buckets.awaitingWash.map((p) => p.id).join(",");
+    const washedIds = buckets.washed.all.map((p) => p.id).join(",");
     const hybIds = buckets.hybridized.map((p) => p.id).join(",");
 
     return [
       {
-        id: "mature",
-        title: "Созрели · нет препарата",
-        count: buckets.matureNoPrep.length,
-        items: buckets.matureNoPrep.slice(0, 3).map(sampleItem),
+        id: "matured",
+        title: "Созрели",
+        count: buckets.matured.length,
+        items: buckets.matured.map(sampleItem),
         action: {
           label: "Создать препарат",
           href: "/журнал/новый-ивент?type=slide",
         },
       },
       {
-        id: "created",
-        title: "Создан",
-        count: buckets.created.length,
-        items: buckets.created.slice(0, 3).map(prepItem),
+        id: "awaiting-wash",
+        title: "Ждёт отмывку",
+        count: buckets.awaitingWash.length,
+        items: buckets.awaitingWash.map(prepItem),
         action: {
           label: "Поставить отмывку",
           href: `/журнал/новый-ивент?type=wash&prep=${createdIds}`,
@@ -116,18 +113,18 @@ export default function ProgressLifecycle() {
       {
         id: "washed",
         title: "Отмыт",
-        count: buckets.primaryWashed.length + buckets.postHybWashed.length,
+        count: buckets.washed.all.length,
         items: [],
         groups: [
           {
             title: "Первично отмыт",
-            items: buckets.primaryWashed.slice(0, 2).map(prepItem),
+            items: buckets.washed.primaryWashed.map(prepItem),
           },
           {
-            title: "Переотмытые (отмыт от гибридизации)",
-            items: buckets.postHybWashed
-              .slice(0, 2)
-              .map((p) => rehybItem(p, historyByPrep)),
+            title: "Переотмытые",
+            items: buckets.washed.rehybReady.map((p) =>
+              rehybItem(p, historyByPrep)
+            ),
           },
         ],
         action: {
@@ -139,31 +136,10 @@ export default function ProgressLifecycle() {
         id: "hybridized",
         title: "Гибридизован",
         count: buckets.hybridized.length,
-        items: buckets.hybridized.slice(0, 3).map(prepItem),
+        items: buckets.hybridized.map(prepItem),
         action: {
           label: "Сфотографировать",
           href: `/журнал/новый-ивент?type=photographing&prep=${hybIds}`,
-        },
-      },
-      {
-        id: "photographed",
-        title: "Сфотографирован",
-        count: buckets.photographed.length,
-        items: buckets.photographed.slice(0, 3).map(prepItem),
-        action: {
-          label: "Открыть импорт фото",
-          href: (() => {
-            const first = buckets.photographed[0];
-            if (!first) return "/кариотип/импорт";
-            const lastStn = stained
-              .filter((s) => s.preparationId === first.id)
-              .sort((a, b) => b.cycleNumber - a.cycleNumber)[0];
-            const qs = new URLSearchParams();
-            qs.set("sampleId", first.sampleId);
-            qs.set("prepId", first.id);
-            if (lastStn) qs.set("stainedId", lastStn.id);
-            return `/кариотип/импорт?${qs.toString()}`;
-          })(),
         },
       },
       {
@@ -171,8 +147,7 @@ export default function ProgressLifecycle() {
         title: "Есть результат",
         count: buckets.result.length,
         items: buckets.result.slice(0, 3).map(sampleItem),
-        // Заказчик: «открыть все» — это не главная, а отфильтрованный список образцов.
-        action: { label: "Открыть все", href: "/журнал/образцы?status=result" },
+        action: { label: "Открыть полный список", href: "/журнал/образцы?status=result" },
         dark: true,
       },
     ];
@@ -189,11 +164,8 @@ export default function ProgressLifecycle() {
         <div className="flex items-center gap-2">
           <BarChart3 size={18} className="text-brand-dark" />
           <h2 className="text-[18px] font-bold text-brand-deep">
-            Прогресс по стадиям
+            Прогресс материала
           </h2>
-          <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-brand-dark">
-            Sample Progress Lifecycle
-          </span>
         </div>
         <button
           onClick={() => nav("/журнал/образцы")}
@@ -203,7 +175,7 @@ export default function ProgressLifecycle() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {cols.map((c) => (
           <div
             key={c.id}

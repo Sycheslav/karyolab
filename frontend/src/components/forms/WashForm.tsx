@@ -18,7 +18,7 @@ interface Props {
 export default function WashForm({ defaultDate }: Props) {
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const addEvent = useStore((s) => s.addEvent);
+  const createWashEvent = useStore((s) => s.createWashEvent);
   const preparations = useStore((s) => s.preparations);
   const plants = useStore((s) => s.plants);
   const events = useStore((s) => s.events);
@@ -95,36 +95,18 @@ export default function WashForm({ defaultDate }: Props) {
       toast.error("Выберите препараты для отмывки");
       return;
     }
-    const id = `EV-WS-${Date.now()}`;
-    addEvent(
-      {
-        id,
-        type: "wash",
-        title: `Предгибридизационная отмывка · Партия ${batchName}`,
-        preparationIds: ids,
-        newFridge: globalFridge,
-        newBox: globalBox,
-        protocolNotes,
-        startDate: `${date}T11:00:00`,
-        endDate: `${date}T12:30:00`,
-        operator: "Лаборант",
-        status: "completed",
-        createdAt: new Date().toISOString(),
-      },
-      [
-        {
-          ts: new Date().toISOString(),
-          title: `${ids.length} препаратов отмыты`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title: "Можно поставить гибридизацию",
-          href: `/журнал/новый-ивент?type=hybridization&prep=${ids.join(",")}`,
-        },
-      ]
-    );
+    const { eventId } = createWashEvent({
+      preparationIds: ids,
+      kind: "pre",
+      newFridge: globalFridge,
+      newBox: globalBox,
+      protocolNotes,
+      operator: "Лаборант",
+      comment: batchName,
+      startDate: `${date}T11:00:00`,
+    });
     toast.success("Ивент сохранён");
-    nav(`/журнал/ивент/${id}`);
+    nav(`/журнал/ивент/${eventId}`);
   }
 
   const selectedCount = Object.values(selected).filter(Boolean).length;

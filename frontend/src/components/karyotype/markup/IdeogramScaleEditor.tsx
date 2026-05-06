@@ -17,13 +17,6 @@ interface Props {
 
 type Tool = "centromere" | "red" | "green" | "anomaly";
 
-const ANOMALY_OPTIONS: { id: AnomalyType; label: string }[] = [
-  { id: "translocation", label: "транслокация" },
-  { id: "atypical_block", label: "нетипичный блок" },
-  { id: "missing_signal", label: "отсутствие сигнала" },
-  { id: "foreign_material", label: "чужеродный материал" },
-];
-
 /**
  * Шкалы разметки идеограммы. Под каждой шкалой можно кликать,
  * чтобы добавить точку. Для зелёного канала поддерживается drag,
@@ -36,9 +29,17 @@ export default function IdeogramScaleEditor({ chromosome }: Props) {
   const removeSignal = useStore((s) => s.removeIdeogramSignal);
   const addAnomaly = useStore((s) => s.addIdeogramAnomaly);
   const removeAnomaly = useStore((s) => s.removeIdeogramAnomaly);
+  // Источник правды по типам аномалий — справочник атласа.
+  const anomalyTypes = useStore((s) => s.anomalyTypes);
+  const chromAnomalyOptions = anomalyTypes.filter(
+    (t) => t.defaultLevel === "chromosome" || t.defaultLevel === "metaphase"
+  );
 
   const [tool, setTool] = useState<Tool>("centromere");
-  const [anomalyType, setAnomalyType] = useState<AnomalyType>("translocation");
+  const [signalKind, setSignalKind] = useState<SignalKind>("point");
+  const [anomalyType, setAnomalyType] = useState<AnomalyType>(
+    (chromAnomalyOptions[0]?.code ?? "translocation") as AnomalyType
+  );
   const [selectedSignalId, setSelectedSignalId] = useState<string | null>(null);
 
   const lengthLabel = `${chromosome.maskSizePx} px`;
@@ -59,18 +60,19 @@ export default function IdeogramScaleEditor({ chromosome }: Props) {
     if (scale === "red") {
       addSignal(chromosome.id, {
         channel: "red",
-        kind: "point",
+        kind: signalKind === "segment" ? "point" : signalKind,
         position: pos,
-        size: 2,
+        size: signalSizeFromKind(signalKind),
       });
       return;
     }
     if (scale === "green") {
       addSignal(chromosome.id, {
         channel: "green",
-        kind: "point",
+        kind: signalKind,
         position: pos,
-        size: 2,
+        size: signalSizeFromKind(signalKind),
+        length: signalKind === "segment" ? 0.08 : undefined,
       });
       return;
     }
@@ -125,6 +127,36 @@ export default function IdeogramScaleEditor({ chromosome }: Props) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-brand-line bg-brand-mint/30 px-4 py-1.5 text-[11px] text-brand-muted">
+        <span className="font-semibold uppercase tracking-wider text-brand-deep/70">
+          Тип сигнала
+        </span>
+        {(
+          [
+            ["small_point", "маленькая точка"],
+            ["point", "точка"],
+            ["large_point", "большая точка"],
+            ["segment", "отрезок (зелёный)"],
+          ] as [SignalKind, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setSignalKind(id)}
+            className={classNames(
+              "rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition",
+              signalKind === id
+                ? "border-brand bg-brand text-white"
+                : "border-brand-line bg-white text-brand-deep hover:bg-brand-mint"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+        <span className="ml-auto text-[10.5px]">
+          для красного отрезок недоступен — фиксируется как «точка»
+        </span>
+      </div>
+
       <div className="grid grid-cols-[80px_1fr_1fr_1fr_1fr] gap-3 bg-slate-950 p-4 text-slate-200">
         <ScaleAxis lengthLabel={lengthLabel} />
         <Scale
@@ -167,9 +199,9 @@ export default function IdeogramScaleEditor({ chromosome }: Props) {
           onPoint={(pos) =>
             addSignal(chromosome.id, {
               channel: "green",
-              kind: "point",
+              kind: signalKind === "segment" ? "point" : signalKind,
               position: pos,
-              size: 2,
+              size: signalSizeFromKind(signalKind),
             })
           }
           onSegment={(start, end) =>
@@ -220,6 +252,7 @@ export default function IdeogramScaleEditor({ chromosome }: Props) {
         <AnomaliesList
           items={anomalies}
           anomalyType={anomalyType}
+          options={chromAnomalyOptions.map((t) => ({ id: t.code, label: t.label }))}
           onChangeType={setAnomalyType}
           onAddAt={(pos) =>
             addAnomaly(chromosome.id, {
@@ -420,7 +453,7 @@ function DraggableScale({
           />
         )}
         {markers.map((m) =>
-          m.kind === "segment" || m.kind === "block" ? (
+          m.kind === "segment" ? (
             <button
               key={m.id}
               onClick={(e) => {
@@ -500,7 +533,11 @@ function SignalsList({
             <span className="text-brand-muted">
               {s.kind === "segment"
                 ? `отрезок · ${(s.length ?? 0).toFixed(2)}`
-                : "точка"}
+                : s.kind === "small_point"
+                  ? "малая точка"
+                  : s.kind === "large_point"
+                    ? "большая точка"
+                    : "точка"}
             </span>
             <span className="ml-auto font-mono text-[11px] text-brand-muted">
               {(s.position * 100).toFixed(0)}%
@@ -522,12 +559,14 @@ function SignalsList({
 function AnomaliesList({
   items,
   anomalyType,
+  options,
   onChangeType,
   onAddAt,
   onRemove,
 }: {
   items: IdeogramAnomaly[];
   anomalyType: AnomalyType;
+  options: { id: AnomalyType; label: string }[];
   onChangeType: (t: AnomalyType) => void;
   onAddAt: (pos: number) => void;
   onRemove: (id: string) => void;
@@ -542,12 +581,19 @@ function AnomaliesList({
           value={anomalyType}
           onChange={(e) => onChangeType(e.target.value as AnomalyType)}
         >
-          {ANOMALY_OPTIONS.map((o) => (
+          {options.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
             </option>
           ))}
         </select>
+        <a
+          href="/атлас/аномалии"
+          className="text-[10.5px] font-semibold text-amber-800 underline-offset-2 hover:underline"
+          title="Открыть справочник аномалий"
+        >
+          справочник
+        </a>
         <button
           onClick={() => onAddAt(0.5)}
           className="grid h-6 w-6 place-items-center rounded-md bg-amber-200 text-amber-900 hover:bg-amber-300"
@@ -567,7 +613,9 @@ function AnomaliesList({
             key={a.id}
             className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-amber-900"
           >
-            <span className="font-semibold">{anomalyLabel(a.type)}</span>
+            <span className="font-semibold">
+              {options.find((o) => o.id === a.type)?.label ?? anomalyLabel(a.type)}
+            </span>
             <span className="ml-auto font-mono text-[11px]">
               {(a.position * 100).toFixed(0)}%
             </span>
@@ -582,6 +630,19 @@ function AnomaliesList({
       </ul>
     </div>
   );
+}
+
+function signalSizeFromKind(k: SignalKind): number {
+  switch (k) {
+    case "small_point":
+      return 1;
+    case "point":
+      return 2;
+    case "large_point":
+      return 3;
+    case "segment":
+      return 2;
+  }
 }
 
 function anomalyLabel(t: AnomalyType): string {

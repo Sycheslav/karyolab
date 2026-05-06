@@ -209,6 +209,12 @@ export default function GenomeLayoutMode() {
         onMakeKaryotype={onMakeKaryotype}
         onApprove={onApprove}
         onGoExport={onGoExport}
+        onToggleReference={(id) =>
+          useStore.getState().toggleSampleKaryotypeReference(id)
+        }
+        onCompareToReference={(id) =>
+          nav(`/атлас/сравнение?karyotypeId=${id}&scenario=vs_reference`)
+        }
       />
 
       {autoSortPreview && (

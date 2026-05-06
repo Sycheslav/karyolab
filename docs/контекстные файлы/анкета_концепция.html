@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="format-detection" content="telephone=no">
+<title>KaryoLab — анкета по нерешённым вопросам</title>
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --ink:#1f2a24;
+    --ink-soft:#445057;
+    --muted:#6b7480;
+    --line:#e7eaef;
+    --line-strong:#ccd2db;
+    --brand:#008236;
+    --brand-dark:#00642a;
+    --brand-soft:#eef5f0;
+    --brand-mint:#e3f0e6;
+    --brand-cream:#eef0f3;
+    --warn-bg:#f5f9f5;
+    --warn-bd:#cfe1d3;
+    --quote-bg:#f3f7f4;
+    --field-bg:#f7f9fb;
+    --shadow:0 1px 3px rgba(20,30,50,0.04),0 4px 14px rgba(20,30,50,0.05);
+    --shadow-lg:0 8px 28px rgba(20,30,50,0.10);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  a{color:var(--brand-dark)}
+
+  .topbar{position:sticky;top:0;z-index:30;background:#ffffff;border-bottom:1px solid var(--line);
+    padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding-top:calc(10px + env(safe-area-inset-top))}
+  .topbar .logo{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .topbar .logo .badge{width:34px;height:34px;border-radius:10px;background:var(--brand);
+    color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .topbar .logo .name{font-weight:800;font-size:16px;letter-spacing:.2px}
+  .topbar .logo .name small{display:block;font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:.4px}
+  .topbar .progress{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .topbar .progress .bar{width:160px;height:6px;background:var(--brand-soft);border-radius:6px;overflow:hidden}
+  .topbar .progress .bar i{display:block;height:100%;background:var(--brand);width:0%;transition:width .25s}
+  .topbar .progress .num{font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .topbar .progress .num b{color:var(--ink)}
+
+  .main{max-width:880px;margin:0 auto;padding:22px 18px 140px}
+
+  .intro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px;box-shadow:var(--shadow);margin-bottom:22px}
+  .intro h1{margin:0 0 6px;font-size:22px;line-height:1.25}
+  .intro h1 .accent{color:var(--brand)}
+  .intro p{margin:6px 0;color:var(--ink-soft)}
+  .intro .hint{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:10px;
+    padding:10px 14px;margin-top:12px;color:var(--ink-soft);font-size:13.5px}
+
+  .toc-inline{margin-top:14px;padding:12px 14px;background:var(--brand-soft);
+    border:1px solid #d8e6dd;border-radius:10px;font-size:13px}
+  .toc-inline b{color:var(--brand-dark)}
+  .toc-inline .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 14px;margin-top:6px}
+  .toc-inline a{color:var(--ink);text-decoration:none;display:block;padding:2px 0;font-size:12.5px}
+  .toc-inline a:hover{color:var(--brand-dark)}
+
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px;box-shadow:var(--shadow);margin-bottom:18px;scroll-margin-top:84px}
+  .sec h2{margin:0 0 4px;font-size:19px;line-height:1.3;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sec h2 .num{display:inline-block;background:var(--brand-soft);color:var(--brand-dark);
+    font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:.4px}
+  .sec h2 .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:8px;
+    text-transform:uppercase;letter-spacing:.5px}
+  .sec h2 .badge.crit{background:#ffe1e1;color:#a00}
+  .sec h2 .badge.new{background:#e3f6e7;color:#1f7a3a}
+  .sec h2 .badge.backend{background:#e8eefb;color:#234a9c}
+  .sec .desc{color:var(--muted);font-size:13.5px;margin:6px 0 0}
+  .sec .quote{background:var(--quote-bg);border-left:3px solid var(--brand);padding:8px 12px;
+    border-radius:6px;margin:12px 0;color:var(--ink-soft);font-size:13px;font-style:italic}
+  .sec .why{margin:12px 0 4px;color:var(--ink);font-size:13.5px}
+  .sec ul.bullets{margin:6px 0 0;padding-left:18px}
+  .sec ul.bullets li{margin-bottom:3px;color:var(--ink-soft);font-size:13.5px}
+
+  .q{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+  .q:first-of-type{border-top:none;padding-top:6px;margin-top:8px}
+  .q .qhead{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .q .qid{display:inline-block;background:#eef1f5;color:var(--ink-soft);font-size:11px;
+    font-weight:700;padding:2px 7px;border-radius:6px;flex-shrink:0;margin-top:2px;letter-spacing:.4px}
+  .q .qtext{font-weight:600;font-size:14.5px;flex:1;min-width:200px}
+  .q .qhint{color:var(--muted);font-size:13px;margin:4px 0 6px}
+  .opts{display:flex;flex-direction:column;gap:6px;margin:8px 0 0}
+  .opts label{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;border:1px solid var(--line);
+    border-radius:10px;cursor:pointer;background:#ffffff;font-size:14px;line-height:1.4;transition:all .12s}
+  .opts label:hover{background:var(--brand-soft);border-color:#c4dccd}
+  .opts label.checked{background:var(--brand-mint);border-color:#a4cdaf;box-shadow:inset 0 0 0 1px #a4cdaf}
+  .opts input{margin-top:3px;flex-shrink:0;accent-color:var(--brand)}
+  .opts label .opt-text{flex:1}
+
+  .freetext{margin-top:8px}
+  .freetext label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px}
+  textarea{width:100%;min-height:60px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;
+    font:inherit;background:var(--field-bg);resize:vertical;color:var(--ink)}
+  textarea:focus,input[type=text]:focus{outline:2px solid var(--brand);background:#fff;border-color:var(--brand)}
+  input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--field-bg);color:var(--ink)}
+
+  .toolbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#ffffff;
+    border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;justify-content:flex-end;
+    flex-wrap:wrap;box-shadow:0 -4px 18px rgba(20,30,50,0.05);
+    padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  .toolbar .left{margin-right:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+  .toolbar button{padding:11px 14px;border-radius:10px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;min-height:42px}
+  .toolbar button:hover{background:var(--brand-soft);border-color:#c4dccd}
+  .toolbar button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .toolbar button.primary:hover{background:var(--brand-dark);border-color:var(--brand-dark)}
+
+  .end{margin:24px 0 0;padding:18px;text-align:center;color:var(--muted);font-size:13.5px;
+    background:var(--card);border:1px dashed var(--line);border-radius:var(--radius)}
+  .end b{color:var(--ink)}
+
+  /* выпадающее меню над кнопкой в нижней панели */
+  .popmenu{position:relative}
+  .popmenu .menu{position:absolute;bottom:calc(100% + 8px);right:0;background:#ffffff;
+    border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);padding:8px;
+    display:none;min-width:260px;max-height:60vh;overflow:auto}
+  .popmenu.open .menu{display:flex;flex-direction:column;gap:4px}
+  .popmenu .menu button{display:flex;width:100%;justify-content:flex-start;align-items:center;gap:8px;
+    border:1px solid transparent;background:#ffffff;border-radius:8px;padding:9px 10px;text-align:left;
+    min-height:38px;font-weight:500;font-size:14px;color:var(--ink);cursor:pointer}
+  .popmenu .menu button:hover{background:var(--brand-soft);border-color:#d8e6dd}
+  .popmenu .menu button.is-active{background:var(--brand-mint);border-color:#a4cdaf;font-weight:700}
+  .popmenu .menu .sep{height:1px;background:var(--line);margin:4px 0}
+  .popmenu .menu .group{display:grid;grid-template-columns:42px 1fr 42px;gap:6px;align-items:center;
+    padding:6px;background:var(--brand-soft);border-radius:10px;margin-bottom:4px}
+  .popmenu .menu .group button{justify-content:center;background:#fff;border-color:var(--line);
+    font-size:18px;font-weight:700;min-height:38px;padding:0}
+  .popmenu .menu .group .label{font-size:12.5px;color:var(--ink-soft);text-align:center;font-weight:600}
+  .popmenu .menu .seclist{display:flex;flex-direction:column;gap:2px}
+
+  @media (max-width:760px){
+    body{font-size:15px}
+    .topbar{padding:8px 12px;gap:8px;padding-top:calc(8px + env(safe-area-inset-top))}
+    .topbar .logo .name{font-size:14px}
+    .topbar .logo .name small{font-size:10.5px}
+    .topbar .progress .bar{width:90px}
+    .main{padding:14px 12px 120px}
+    .intro{padding:16px 16px;border-radius:12px}
+    .intro h1{font-size:19px;line-height:1.3}
+    .intro p{font-size:14px}
+    .toc-inline .grid{grid-template-columns:1fr}
+    .sec{padding:14px 14px;border-radius:12px;margin-bottom:12px}
+    .sec h2{font-size:16px}
+    .opts label{font-size:14.5px;padding:11px 12px;border-radius:10px}
+    .opts input{width:20px;height:20px;margin-top:1px}
+    textarea{min-height:74px;font-size:16px;padding:11px 12px}
+    input[type=text]{font-size:16px;padding:11px 12px}
+    .q .qtext{font-size:14.5px;line-height:1.35}
+    .q .qid{display:inline-block;margin-top:2px}
+    .toolbar{padding:8px 10px;gap:6px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+    .toolbar .left{display:none}
+    .toolbar button{padding:11px 12px;font-size:14px;min-height:44px;flex:1;justify-content:center}
+    .toolbar button .full{display:none}
+    .popmenu{flex:1}
+    .popmenu .menu{left:0;right:0;min-width:0;max-height:65vh}
+  }
+  .toolbar button .short{display:none}
+  @media (max-width:760px){
+    .toolbar button .short{display:inline}
+    .toolbar button .full{display:none}
+  }
+  @media (max-width:380px){
+    .topbar .logo .name{font-size:13px}
+    .opts label{font-size:14px}
+  }
+
+  .toast-error{position:fixed;left:50%;top:80px;transform:translateX(-50%);background:#a00;color:#fff;
+    padding:10px 16px;border-radius:8px;font-size:13.5px;z-index:70;display:none;max-width:90vw}
+  .toast-error.show{display:block}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <div class="badge">KL</div>
+    <div class="name">KaryoLab — анкета<small>нерешённые вопросы продукта</small></div>
+  </div>
+  <div class="progress">
+    <span class="num"><b id="progressNum">0</b> / <b id="progressTotal">0</b></span>
+    <span class="bar"><i id="progressBar"></i></span>
+  </div>
+</header>
+
+<main class="main">
+  <section class="intro">
+    <h1>Привет, Лиза! Это <span class="accent">смысловая</span> анкета по KaryoLab.</h1>
+    <p>Здесь не про кнопки и пиксели, а про <b>идеи и правила</b>: как программа должна себя вести в спорных ситуациях, чем считать «результат», что делать с нестандартными случаями, как жить нескольким учёным с одной программой. Темы, на которые ты уже отвечала в прошлой анкете, я постарался не задавать заново — здесь только то, что не было.</p>
+    <p>Ответы сохраняются в браузере — можно закрыть и вернуться. Когда закончишь, жми <b>«Скачать»</b> в нижней панели и выбери формат (.md или .txt) — файл уйдёт в загрузки. Чтобы быстро прыгать между разделами, открой <b>«Навигация»</b> рядом.</p>
+    <div class="hint">
+      <b>Подсказка:</b> кружок — выбери один вариант, квадратик — можно несколько. Под каждой группой есть поле «свой ответ / уточнение». Если на вопрос нет понимания — пиши «не знаю», «обсудим голосом», «вернусь позже» — это тоже ответ.
+    </div>
+    <div class="toc-inline">
+      <b>Что внутри:</b>
+      <div class="grid" id="tocList"></div>
+    </div>
+  </section>
+
+  <div id="sections"></div>
+
+  <div class="end">
+    Дошла до конца — спасибо! Открой <b>«Скачать»</b> в нижней панели, выбери .md или .txt, файл появится в загрузках. Дальше — присылай его мне в любом удобном виде.
+  </div>
+</main>
+
+<div class="toolbar">
+  <div class="left">
+    Автосохранение в браузере · последний раз: <span id="lastSaved">только что</span>
+  </div>
+
+  <div class="popmenu" id="navMenu">
+    <button type="button" onclick="togglePop('navMenu')" aria-haspopup="true" aria-expanded="false">
+      <span class="full">Навигация по разделам</span><span class="short">Навигация</span>
+    </button>
+    <div class="menu" role="menu">
+      <div class="group" aria-label="Переход между разделами">
+        <button type="button" onclick="jumpSection(-1)" aria-label="Предыдущий раздел">↑</button>
+        <div class="label">К разделу</div>
+        <button type="button" onclick="jumpSection(1)" aria-label="Следующий раздел">↓</button>
+      </div>
+      <div class="seclist" id="sectionList"></div>
+    </div>
+  </div>
+
+  <div class="popmenu" id="dlMenu">
+    <button type="button" class="primary" onclick="togglePop('dlMenu')" aria-haspopup="true" aria-expanded="false">
+      <span class="full">Скачать ответы</span><span class="short">Скачать</span>
+    </button>
+    <div class="menu" role="menu">
+      <button type="button" onclick="downloadAnswers('md')">Скачать как .md (Markdown)</button>
+      <button type="button" onclick="downloadAnswers('txt')">Скачать как .txt (текст)</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-error" id="toastError"></div>
+
+<script>
+/* =========================================================
+   Структура анкеты.
+   { id, title, topic?, intro?, quote?, why?, why_list?, badges?:['crit'|'new'|'backend'],
+     questions:[
+       { id, text, hint?, type:'radio'|'checkbox'|'text'|'textarea', options?:[{id,label}] }
+     ]
+   }
+   ID вопроса: q<sectionNum>_<questionNum>. В md рендерится как Q<n>.<m>.
+   ========================================================= */
+const DATA = [
+  {
+    id: 's0',
+    title: 'Цель программы и горизонт',
+    topic: 'Главное «зачем»',
+    intro: 'Один короткий блок, чтобы понять, под что мы вообще целимся. Подробное «что болит сейчас» ты уже подробно описала в прошлой анкете — здесь только то, что не было.',
+    questions: [
+      { id:'q0_1', type:'radio',
+        text:'На какой горизонт мы строим продукт?',
+        options:[
+          { id:'short',  label:'1–2 года: под текущие задачи, эксперименты, диссертацию' },
+          { id:'mid',    label:'3–5 лет: под расширение лаборатории и смежные виды (рожь, эгилопсы и др.)' },
+          { id:'long',   label:'Долгосрочно: как стандарт работы, чтобы передавать другим лабораториям' },
+          { id:'unknown',label:'Сложно сказать, начнём с MVP и посмотрим' },
+        ]
+      },
+      { id:'q0_2', type:'textarea',
+        text:'Сверх твоего топ-3 (таймлайн посева, графический редактор, идеограммы) — что должно быть в первой полноценной версии, без чего «не считается программой»? Назови 1–2 фичи и почему именно они.',
+        hint:'Если ничего не приходит в голову — так и напиши «больше ничего, для MVP хватит топ-3».'
+      },
+      { id:'q0_3', type:'radio',
+        text:'Программа должна полноценно работать офлайн (без интернета)?',
+        options:[
+          { id:'always_offline', label:'Да, всегда — мой ПК может быть без сети' },
+          { id:'offline_main',   label:'Да в основном, но интернет можно использовать для обновлений и литературы' },
+          { id:'online_ok',      label:'Можно требовать интернет — у меня он стабильный' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's1',
+    title: 'Кто пользуется и где живёт программа',
+    topic: 'Локальный exe и обмен между ПК',
+    badges:['backend'],
+    intro:'Программа компилируется в .exe и ставится локально на ПК. Дальше всё зависит от того, сколько вас и как вы делитесь данными.',
+    questions:[
+      { id:'q1_1', type:'radio',
+        text:'Сколько учёных одновременно будут пользоваться программой?',
+        options:[
+          { id:'one',     label:'Только я' },
+          { id:'few',     label:'2–4 учёных в одной лаборатории' },
+          { id:'many',    label:'Целая лаборатория (5+) и студенты' },
+          { id:'unknown', label:'Сначала только я, потом ещё кто-то — пока неясно' },
+        ]
+      },
+      { id:'q1_2', type:'radio',
+        text:'У каждого учёного своя база, или одна общая на сетевой папке/сервере?',
+        options:[
+          { id:'each_own',   label:'У каждого свой ПК и своя независимая база' },
+          { id:'shared_net', label:'Одна общая база в сетевой папке/сервере, все пишут в неё' },
+          { id:'mixed',      label:'У каждого своя, но иногда обмениваемся (импорт/экспорт)' },
+          { id:'undecided',  label:'Не решили — нужно подумать вместе' },
+        ]
+      },
+      { id:'q1_3', type:'checkbox',
+        text:'Если базы у каждого свои — что должно уметь делать «передать коллеге»?',
+        hint:'Думай про сценарий «коллега доделал кариотип образца у себя, прислал мне».',
+        options:[
+          { id:'export_sample',  label:'Выгружать один образец со всем содержимым (фото, метафазы, кариотипы) одним архивом' },
+          { id:'export_project', label:'Выгружать всю базу проекта как переносимый пакет' },
+          { id:'import_view',    label:'Подключать чужой пакет «на чтение», не сливая со своим' },
+          { id:'merge_full',     label:'Сливать чужие изменения с моими (с разрешением конфликтов)' },
+          { id:'no_share',       label:'Нам не нужен обмен — каждый сам за себя' },
+        ]
+      },
+      { id:'q1_4', type:'radio',
+        text:'Где должны жить файлы программы (база и снимки)?',
+        options:[
+          { id:'fixed',     label:'Программа сама выбирает место (например AppData) — не хочу думать' },
+          { id:'choose',    label:'Я хочу выбирать папку проекта при первом запуске' },
+          { id:'multi_proj',label:'Хочу несколько папок-проектов и переключаться между ними' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's2',
+    title: 'Когда «есть результат»',
+    topic: 'Согласованность статусов',
+    badges:['crit'],
+    intro:'В документации сейчас две версии: где-то «есть результат» = создан хоть один кариотип, где-то = утверждено мной явно. Нужно выбрать одну.',
+    quote:'«В разделе кариотипа создан минимум один кариотип» (журнал) vs «утверждённый результат становится виден атласу» (атлас).',
+    questions:[
+      { id:'q2_1', type:'radio',
+        text:'Когда образец должен переходить в статус «есть результат»?',
+        options:[
+          { id:'any_draft',     label:'Сразу как создан хотя бы один черновик кариотипа' },
+          { id:'ready_review',  label:'Когда лицевой кариотип помечен «готов к проверке»' },
+          { id:'approved',      label:'Только когда я явно нажала «утвердить»' },
+          { id:'exported',      label:'Только когда из него собран экспортный обзор (картинка для статьи)' },
+        ]
+      },
+      { id:'q2_2', type:'radio',
+        text:'Можно ли «снять утверждение» с кариотипа, если потом нашлась ошибка?',
+        options:[
+          { id:'yes_silent',    label:'Да спокойно — статус откатывается, образец возвращается «в работе»' },
+          { id:'yes_archive',   label:'Да, но утверждённая версия должна остаться как архивная' },
+          { id:'never',         label:'Нет — утверждённое неизменно, надо делать новый кариотип' },
+        ]
+      },
+      { id:'q2_3', type:'checkbox',
+        text:'Какие статусы реально нужны лицевому кариотипу?',
+        hint:'Можно отметить от 2 до 5. Если что-то лишнее — не отмечай.',
+        options:[
+          { id:'draft',         label:'Черновик' },
+          { id:'incomplete',    label:'Неполный (не все классы закрыты, есть сомнения)' },
+          { id:'ready_review',  label:'Готов к проверке' },
+          { id:'approved',      label:'Утверждён' },
+          { id:'published',     label:'Опубликован (использован в статье/отчёте)' },
+          { id:'archived',      label:'Архивный (старая версия)' },
+        ]
+      },
+      { id:'q2_4', type:'radio',
+        text:'Если у образца несколько лицевых кариотипов — какой показывать в карточке образца «по умолчанию»?',
+        options:[
+          { id:'main_flag',     label:'Тот, что я явно пометила «главный»' },
+          { id:'last_approved', label:'Последний утверждённый по дате' },
+          { id:'all_thumb',     label:'Все сразу превью-плитками — выбираю взглядом' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's3',
+    title: 'ID и пакетная регистрация',
+    topic: 'Только то, что не было раньше',
+    intro:'Форматы ID, точку как разделитель и текстовые имена ты уже подтвердила. Здесь только то, что не было.',
+    questions:[
+      { id:'q3_1', type:'radio',
+        text:'Можно ли переименовывать ID образца после создания?',
+        options:[
+          { id:'never',         label:'Никогда — ID стабилен навсегда' },
+          { id:'before_data',   label:'Можно, пока к образцу нет ничего (растений, препаратов, фото)' },
+          { id:'with_warning',  label:'Можно с громким предупреждением «изменятся все связи»' },
+          { id:'always',        label:'Можно всегда — программа сама пересохранит ссылки' },
+        ]
+      },
+      { id:'q3_2', type:'radio',
+        text:'Если хочется заранее «забронировать» 50 номеров под партию семян — нужна ли пакетная регистрация?',
+        options:[
+          { id:'yes_batch',     label:'Да — введу диапазон, программа создаст 50 пустых образцов' },
+          { id:'reserve_only',  label:'Достаточно «зарезервировать диапазон», заполнять можно потом' },
+          { id:'one_by_one',    label:'Нет, я создам по одному — это тоже быстро' },
+        ]
+      },
+      { id:'q3_3', type:'text',
+        text:'Сколько максимум окрашиваний (циклов гибридизации) бывает на одном препарате? И ок ли, что суффикс ID окрашенного препарата (1730.25.1.1.1) растёт без верхнего предела?',
+        hint:'Это нужно, чтобы понять — оставлять «не больше 4 окрасок» или снимать ограничение совсем.'
+      },
+      { id:'q3_4', type:'radio',
+        text:'Стандартная нотация ISCN (например «t(5BS;5DL)») — нужна?',
+        options:[
+          { id:'iscn_optional', label:'Удобно если можно вписать строку ISCN отдельным полем' },
+          { id:'iscn_full',     label:'Да, полное соответствие ISCN желательно' },
+          { id:'no_iscn',       label:'Не нужно, у меня свои сокращения' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's4',
+    title: 'Журнал, ивенты, заметки на главной',
+    topic: 'Что и как пишется само',
+    intro:'Что выбирать «партией» (посев/отмыв/гибр) и что класть в ленту «сегодня» (только лабораторные действия) — ты уже сказала. Здесь — детали, которые не были.',
+    quote:'«у меня должна быть возможность написать там анекдот и все (ну можно конечно чтоб они сохранялись). список висяков и календарь под цифрами и заметками».',
+    questions:[
+      { id:'q4_1', type:'radio',
+        text:'Длинные операции (посев/проращивание, гибридизация) — встроенный пошаговый таймер должен быть:',
+        options:[
+          { id:'yes_required', label:'Обязательным — со списком шагов и временами, без него партию не закрыть' },
+          { id:'yes_optional', label:'Опциональным — могу пропустить или заполнить позже' },
+          { id:'no_link',      label:'Не нужен внутри — достаточно ссылки на внешний документ (Word/Excel)' },
+        ]
+      },
+      { id:'q4_2', type:'checkbox',
+        text:'Шаблоны протоколов (свой для гибридизации, свой для отмыва и т.д.) — кто их создаёт?',
+        options:[
+          { id:'me_each',     label:'Я сама создаю шаблон под каждую операцию' },
+          { id:'preset',      label:'Программа поставляется с базовыми шаблонами, я могу их менять' },
+          { id:'shared_lab',  label:'Шаблоны общие на лабораторию (синхронизация между ПК)' },
+        ]
+      },
+      { id:'q4_3', type:'radio',
+        text:'Если за день несколько ивентов одного типа (например 5 фиксаций) — как они должны выглядеть в ленте/календаре?',
+        options:[
+          { id:'collapsed',   label:'Свёрнуты в один блок «фиксация ×5», по клику раскрываются' },
+          { id:'expanded',    label:'Развёрнуты как 5 отдельных строк' },
+          { id:'configurable',label:'По умолчанию свёрнуты, но я могу переключить' },
+        ]
+      },
+      { id:'q4_4', type:'radio',
+        text:'Заметки/анекдоты на главной (свободный блок «не привязано ни к чему»):',
+        options:[
+          { id:'sticky_one',  label:'Один «закреплённый» блок-стикер, всегда видимый' },
+          { id:'dated_log',   label:'Лента заметок с датой — как мини-дневник' },
+          { id:'tags_link',   label:'Заметки можно по желанию привязать к образцу/препарату/событию (но необязательно)' },
+        ]
+      },
+      { id:'q4_5', type:'radio',
+        text:'Кто создаёт «системные» события (типа «создан образец», «изменены родители»)?',
+        options:[
+          { id:'auto_hidden', label:'Программа сама, но в отдельном «системном» журнале — в ленту дня они не попадают' },
+          { id:'auto_filter', label:'Программа сама, в общей ленте, но с возможностью спрятать одной галочкой' },
+          { id:'no_system',   label:'Никаких системных событий — только то, что я сама добавила' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's5',
+    title: 'Целостность и опечатки',
+    topic: 'Что нельзя сломать одним кликом',
+    badges:['backend'],
+    intro:'Цепочка: образец → растение → препарат → окраска → метафаза → хромосома. Что делать, когда её портят (случайно или нет).',
+    questions:[
+      { id:'q5_1', type:'radio',
+        text:'Если случайно удаляю препарат, у которого уже есть гибридизация и фото — что должно произойти?',
+        options:[
+          { id:'block',       label:'Запретить удаление, пока есть дочерние объекты' },
+          { id:'cascade_warn',label:'Удалить вместе со всеми дочерними, но с большим предупреждением и списком «что удалится»' },
+          { id:'archive',     label:'Не удалять, а архивировать — в списках больше не показывать, можно восстановить' },
+          { id:'soft_delete', label:'Удалять «мягко» с возможностью вернуть в течение N дней' },
+        ]
+      },
+      { id:'q5_2', type:'radio',
+        text:'Если повторно импортирую тот же PSD-файл (с тем же именем) — что должно произойти?',
+        options:[
+          { id:'block_dup',   label:'Заблокировать как дубликат с понятным сообщением' },
+          { id:'overwrite',   label:'Спросить «перезаписать существующий импорт?»' },
+          { id:'new_import',  label:'Создать новый отдельный импорт (без перезаписи)' },
+          { id:'merge_psd',   label:'Слить со старым, добавив только новые слои' },
+        ]
+      },
+      { id:'q5_3', type:'radio',
+        text:'Если выяснилось, что препарат на самом деле от другого растения (перепутали в журнале) — как переназначать?',
+        options:[
+          { id:'reassign_free', label:'Дать спокойно перепривязать одной кнопкой' },
+          { id:'reassign_log',  label:'Дать перепривязать, но с обязательной записью в историю и подписью «причина»' },
+          { id:'recreate',      label:'Не трогать старый, создать новый правильный — старый пометить «ошибка/брак»' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's6',
+    title: 'Имена файлов и метаданные снимков',
+    topic: 'Что программа понимает из имени',
+    badges:['new'],
+    intro:'У тебя имена снимков уже несут много смысла, например `1730.25-GAA+pAs119+pAs1-21-112.14.psd` (образец, зонды, номер фото, координаты метафазы). Решаем, что с этим делать.',
+    questions:[
+      { id:'q6_1', type:'radio',
+        text:'Должна ли программа автоматически парсить имя файла и предлагать привязку (образец, зонды, координаты)?',
+        options:[
+          { id:'yes_offer',   label:'Да, парсить и подставлять как «предложение», я подтверждаю' },
+          { id:'yes_strict',  label:'Да, парсить и сразу применять, если совпадение однозначное' },
+          { id:'manual',      label:'Нет, я всё выберу из выпадающих списков сама' },
+        ]
+      },
+      { id:'q6_2', type:'radio',
+        text:'Координаты метафазы (например «21-112.14» или то, что пишет микроскоп) — как хранить?',
+        options:[
+          { id:'field',       label:'Отдельное поле метафазы (можно искать/сравнивать)' },
+          { id:'in_filename', label:'Достаточно в имени файла, отдельное поле не нужно' },
+          { id:'both',        label:'И поле, и продублировано в имени файла' },
+        ]
+      },
+      { id:'q6_3', type:'checkbox',
+        text:'TIF от микроскопа часто несёт встроенные метаданные (μm/px, экспозиция, дата, объектив). Что из этого тебе реально нужно?',
+        options:[
+          { id:'um_per_px',   label:'Масштаб μm/px (для калибровки)' },
+          { id:'datetime',    label:'Дата/время съёмки (для журнала)' },
+          { id:'objective',   label:'Объектив микроскопа' },
+          { id:'channels',    label:'Названия каналов как их видит микроскоп (DAPI, GFP и т.п.)' },
+          { id:'none',        label:'Ничего из этого не критично — я сама заполняю что надо' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's7',
+    title: 'Графический редактор: остатки',
+    topic: 'То, что ещё не уточнили',
+    badges:['crit'],
+    intro:'Сам набор инструментов (уровни, авто-DAPI с ползунком, лассо, мягкая кисть, мягкий ластик, marionette, undo, скрытие каналов, зум, неприкосновенность исходника) ты уже подтвердила. Здесь — то, что не было.',
+    questions:[
+      { id:'q7_1', type:'checkbox',
+        text:'Какие форматы исходных снимков обязательно открывать?',
+        hint:'PSD и TIF (3 канала или RGB) — базовый минимум, тут уточняем «сверх».',
+        options:[
+          { id:'tif16',label:'TIF 16-bit (с реальной глубиной флюоресценции, не сжатый до 8-bit)' },
+          { id:'png',  label:'PNG — для презентаций и быстрых вставок' },
+          { id:'jpg',  label:'JPG — для подписи и черновиков' },
+          { id:'czi',  label:'Файлы микроскопов (CZI/LIF/ND2 и т.п.) — разбирать сразу, без конвертации' },
+          { id:'none_extra', label:'Ничего сверх PSD/TIF — мне больше не нужно' },
+        ]
+      },
+      { id:'q7_2', type:'radio',
+        text:'PSD от внешнего фотошопа — оставить «параллельным путём» или со временем убрать?',
+        options:[
+          { id:'always_keep', label:'Оставить навсегда — иногда удобнее в фотошопе' },
+          { id:'keep_now',    label:'Оставить пока, но цель — отказаться от внешнего фотошопа' },
+          { id:'replace',     label:'Сразу заменить на встроенный редактор, PSD-путь не нужен' },
+        ]
+      },
+      { id:'q7_3', type:'radio',
+        text:'Если хромосомы одной метафазы лежат на 2–3 соседних снимках — как должно работать «соединение»?',
+        options:[
+          { id:'merge_canvas',label:'Открыть несколько фото на одном холсте и работать как с одной метафазой' },
+          { id:'borrow',      label:'Оставить метафазы отдельными, но дать «дотянуть» одну хромосому из соседней метафазы в кариотип' },
+          { id:'one_only',    label:'Одна метафаза = один снимок, никаких объединений' },
+          { id:'discuss',     label:'Не уверена — это надо обсудить голосом' },
+        ]
+      },
+      { id:'q7_4', type:'textarea',
+        text:'Что в редакторе обязательно «должно быть как в фотошопе», иначе будет неудобно?',
+        hint:'Например, поведение кисти ([ и ] для размера), Alt+клик = пипетка, поведение слоёв, привычные горячие клавиши и т.д. Если это «и так очевидно» — пиши «как в фотошопе и всё».'
+      },
+    ]
+  },
+
+  {
+    id: 's8',
+    title: 'Файлы и хранилище',
+    topic: 'Где живут 150 ГБ снимков',
+    badges:['backend'],
+    intro:'У тебя сейчас ~150 ГБ снимков в обычных папках. Решаем, что программа реально хранит у себя, а что только ссылается.',
+    quote:'«получается что у меня эти фотки эти данные копируются в папки бд… или у меня в бд по хорошему по классному хранятся только вырезанные хромосомы».',
+    questions:[
+      { id:'q8_1', type:'radio',
+        text:'Что программа делает с большими исходными снимками (TIF/PSD от микроскопа)?',
+        options:[
+          { id:'copy_in',     label:'Копирует к себе в папку проекта (полная независимость, но место х2)' },
+          { id:'link_only',   label:'Только ссылка на оригинал — он остаётся в моей папке' },
+          { id:'choose_each', label:'Выбор при импорте: копировать или связать ссылкой' },
+          { id:'thumb_only',  label:'Хранит только превью + извлечённые хромосомы; оригинал по ссылке' },
+        ]
+      },
+      { id:'q8_2', type:'radio',
+        text:'Как должна выглядеть папка проекта на диске?',
+        options:[
+          { id:'opaque_db',   label:'Один большой файл базы (не лазить руками), плюс папка медиа' },
+          { id:'tree_human',  label:'Понятное дерево папок — чтобы я могла зайти проводником и найти файл' },
+          { id:'tree_auto',   label:'Понятное дерево + база рядом, но файлы руками не трогать' },
+        ]
+      },
+      { id:'q8_3', type:'radio',
+        text:'В описании ты предлагала иерархию «образец / растение / препарат / гибридизация / метафаза». Подтверждаем как структуру папок проекта?',
+        options:[
+          { id:'yes_exact',   label:'Да, ровно так' },
+          { id:'yes_flex',    label:'Да, но с возможностью настроить (например пропускать «растение» для смесей)' },
+          { id:'flat',        label:'Нет, лучше плоско по образцу — всё внутри одной папки образца' },
+          { id:'no_matter',   label:'Не важно — пусть программа решает, я туда не лезу' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's9',
+    title: 'Идеограмма: остатки',
+    topic: 'То, что не было в прошлой анкете',
+    intro:'Вертикальные шкалы рядом с хромосомой, типы сигнала (точка/жирная точка/отрезок), толстую центромеру, авто-генерацию идеограммы и сравнение в трёх режимах — ты уже подтвердила. Здесь — детали, которые не освещали.',
+    questions:[
+      { id:'q9_1', type:'radio',
+        text:'Положение центромеры — как программа должна его определять?',
+        options:[
+          { id:'auto_only',   label:'Автоматически по контуру хромосомы, без подтверждения' },
+          { id:'auto_confirm',label:'Автоматически как подсказка — я подтверждаю/правлю' },
+          { id:'manual',      label:'Только вручную, никаких авто-предположений' },
+        ]
+      },
+      { id:'q9_2', type:'radio',
+        text:'Длина хромосомы определяется автоматически по маске. Нужна ли возможность ручной коррекции (если маска неровная или с захватом фона)?',
+        options:[
+          { id:'yes_handles', label:'Да — два «маркера» сверху и снизу, я двигаю и фиксирую длину' },
+          { id:'yes_mask',    label:'Да, но только через правку самой маски (не через отдельные ручки)' },
+          { id:'no',          label:'Нет, доверяю автомату' },
+        ]
+      },
+      { id:'q9_3', type:'checkbox',
+        text:'Что обязательно сохранять для каждого сигнала (точка/жирная точка/отрезок)?',
+        options:[
+          { id:'channel',     label:'Канал (R/G/B/иной)' },
+          { id:'kind',        label:'Тип (точка/жирная точка/отрезок)' },
+          { id:'position',    label:'Позиция вдоль хромосомы (нормированная 0..1)' },
+          { id:'size',        label:'Размер сигнала' },
+          { id:'intensity',   label:'Интенсивность сигнала (если можно измерить)' },
+          { id:'probe_name',  label:'Какой зонд' },
+          { id:'confidence',  label:'Уверенность эксперта (низкая/средняя/высокая)' },
+          { id:'comment',     label:'Текстовый комментарий' },
+        ]
+      },
+      { id:'q9_4', type:'radio',
+        text:'Аномалии (точка разрыва, чужой блок) — на идеограмме отдельной шкалой:',
+        options:[
+          { id:'always',      label:'Всегда показывать «линию аномалий» рядом со шкалами сигналов' },
+          { id:'only_when',   label:'Показывать только если есть хотя бы одна аномалия' },
+          { id:'inline',      label:'Не отдельной линией — рисовать прямо на хромосоме (стрелка/маркер)' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's10',
+    title: 'Геном, субгеномы, плоидность',
+    topic: 'Гибкость классификации',
+    badges:['crit'],
+    intro:'A/B/D × 7 — только дефолт. Реально бывают R, U, M, неполные геномы, тетраплоиды, замещения целых субгеномов. То, что ты называла «авродес» (А и B пшеничные, D частично или полностью на S от спельтоидеса, бывает трисомия 5D вместо 5B) — нужно уметь описывать.',
+    questions:[
+      { id:'q10_1', type:'checkbox',
+        text:'Какие наборы субгеномов нужны как «готовые шаблоны»?',
+        options:[
+          { id:'wheat_abd',   label:'Пшеница: A, B, D × 7 (гексаплоид)' },
+          { id:'wheat_ab',    label:'Тетраплоид: A, B × 7' },
+          { id:'wheat_a',     label:'Диплоид: только A × 7' },
+          { id:'tritic',      label:'Тритикале: A, B, D, R' },
+          { id:'aegilops',    label:'Эгилопсы: U, M, S, …' },
+          { id:'rye',         label:'Рожь: R × 7' },
+          { id:'custom',      label:'И всегда возможность создать свой шаблон под образец' },
+        ]
+      },
+      { id:'q10_2', type:'radio',
+        text:'Кто решает, сколько хромосом в строке матрицы (классов)?',
+        options:[
+          { id:'always_7',    label:'Всегда 7 (как для пшеницы)' },
+          { id:'per_template',label:'Зависит от шаблона субгенома' },
+          { id:'per_sample',  label:'Я задаю сама для каждого образца' },
+        ]
+      },
+      { id:'q10_3', type:'radio',
+        text:'Замещение целого субгенома (D → спельтоидес/S) — как обозначать в матрице?',
+        options:[
+          { id:'rename_col',  label:'Переименовываю колонку D в S — и всё' },
+          { id:'two_cols',    label:'Две колонки рядом: D (ожидаемая, пустая) и S (фактическая)' },
+          { id:'tag_cells',   label:'Колонка та же, но каждая ячейка помечена «замещение»' },
+        ]
+      },
+      { id:'q10_4', type:'checkbox',
+        text:'Какие количества хромосом в одной ячейке должны корректно поддерживаться?',
+        options:[
+          { id:'zero',        label:'0 — пусто (нуллисомия или просто не размечено)' },
+          { id:'one',         label:'1 — моносомия или неполная разметка' },
+          { id:'two',         label:'2 — нормальная пара' },
+          { id:'three_plus',  label:'3 и больше — трисомия / избыток' },
+          { id:'half',        label:'«Половина» — кусочек хромосомы, транслокация' },
+        ]
+      },
+      { id:'q10_5', type:'radio',
+        text:'Должна ли программа отличать «не нашли» от «нашли пусто (нуллисомия)»?',
+        options:[
+          { id:'must',        label:'Да, обязательно — это разные научные выводы' },
+          { id:'optional',    label:'Желательно, но необязательно' },
+          { id:'no',          label:'Не важно — пишу комментарий и всё' },
+        ]
+      },
+      { id:'q10_6', type:'radio',
+        text:'Чужеродный материал (например ржаная хромосома в пшенице) — как лучше показывать в кариотипе?',
+        options:[
+          { id:'foreign_col', label:'Отдельная колонка «foreign» в матрице' },
+          { id:'foreign_tag', label:'Хромосома попадает в свой класс, но с пометкой «чужеродный»' },
+          { id:'sep_kar',     label:'Отдельный мини-кариотип «чужеродные элементы» рядом с основным' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's11',
+    title: 'Лицевой кариотип — детали',
+    topic: 'Что не было раньше',
+    intro:'Сборку «открыть все 5D со всех метафаз → выбрать одну», базовое хранение происхождения, несколько лицевых параллельно, чёрный фон, выравнивание по центромере — ты уже подтвердила.',
+    questions:[
+      { id:'q11_1', type:'radio',
+        text:'Сколько объектов на лицевом кариотипе по умолчанию?',
+        options:[
+          { id:'somatic',     label:'Соматический набор парами (42 для гексаплоида, и т.д. по плоидности)' },
+          { id:'haploid',     label:'Гаплоидный (по одной из каждой пары)' },
+          { id:'configurable',label:'Зависит от образца — я выбираю каждый раз' },
+        ]
+      },
+      { id:'q11_2', type:'radio',
+        text:'Если нашлась хромосома лучше — можно ли заменить её в уже утверждённом кариотипе?',
+        options:[
+          { id:'replace_log', label:'Да, с отметкой в истории и сохранением старой' },
+          { id:'new_version', label:'Нет — создаём новую версию кариотипа, утверждённый не трогаем' },
+          { id:'replace_silent',label:'Да спокойно — старая просто пропадает' },
+        ]
+      },
+      { id:'q11_3', type:'radio',
+        text:'В разговорах ты используешь «лицевой кариотип», «обзор», «обзорный кариотип», «итоговый» — это синонимы или разное?',
+        options:[
+          { id:'all_same',    label:'Это одно и то же, оставим один термин (какой — напишу в уточнении)' },
+          { id:'different',   label:'Разное — у каждого свой смысл (опишу ниже)' },
+          { id:'no_strict',   label:'Сейчас пользуюсь как попало — пусть программа сама выберет один и научит меня' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's12',
+    title: 'Аномалии и нестандартные кариотипы',
+    topic: 'Структурно, не текстом',
+    intro:'Чтобы аномалии искались и сравнивались, их нужно описывать структурно (а не «комментарием на хромосоме»).',
+    questions:[
+      { id:'q12_1', type:'checkbox',
+        text:'На каких уровнях должна жить аномалия (можно несколько)?',
+        options:[
+          { id:'lvl_chrom',   label:'На отдельной хромосоме (странный сигнал, разрыв, форма)' },
+          { id:'lvl_meta',    label:'На уровне метафазы (плохое разделение, перекрытия)' },
+          { id:'lvl_class',   label:'На уровне класса (трисомия 5D, нет пары 5B)' },
+          { id:'lvl_subg',    label:'На уровне субгенома (полное замещение)' },
+          { id:'lvl_sample',  label:'На уровне образца (общая аномалия, подтверждённая многими метафазами)' },
+        ]
+      },
+      { id:'q12_2', type:'radio',
+        text:'Список типов аномалий — фиксированный или расширяемый?',
+        options:[
+          { id:'fixed',       label:'Фиксированный (трисомия / нуллисомия / транслокация / замещение / нетипичный блок / сомнительный)' },
+          { id:'fixed_plus',  label:'Фиксированный + категория «другое» со свободным текстом' },
+          { id:'editable',    label:'Полностью редактируемый — добавляю свои типы в справочник' },
+        ]
+      },
+      { id:'q12_3', type:'radio',
+        text:'Если такая же аномалия попадается у тебя в N метафазах подряд — что должна делать программа?',
+        options:[
+          { id:'auto_count',  label:'Сама считает «подтверждено в 3 из 5 метафаз» и пишет рядом с аномалией' },
+          { id:'auto_promote',label:'Сама поднимает аномалию на уровень образца, когда повторение надёжное' },
+          { id:'manual',      label:'Ничего не делает — я сама пишу комментарий и решаю' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's13',
+    title: 'Атлас и эталоны — то, что ещё не было',
+    topic: 'Видимость и эталонизация',
+    badges:['new'],
+    intro:'Что эталон = кариотип (а не хромосома), источники эталонов (литература / свои образцы / рисование), что в карточке эталона — ты уже подтвердила. Здесь только то, что не было.',
+    questions:[
+      { id:'q13_1', type:'radio',
+        text:'Что атлас должен показывать по образцу?',
+        options:[
+          { id:'approved_only', label:'Только утверждённые кариотипы' },
+          { id:'ready_or_better', label:'Утверждённые + «готовые к проверке»' },
+          { id:'all_drafts',  label:'Любые черновики и наброски — мне видно весь свой прогресс' },
+        ]
+      },
+      { id:'q13_2', type:'radio',
+        text:'Как помечать готовый кариотип «эталонным» (чтобы он попал в избранный список атласа)?',
+        options:[
+          { id:'star_btn',    label:'Кнопка-звёздочка в карточке кариотипа — нажала, и он эталон' },
+          { id:'flag_review', label:'Опция при утверждении: «утвердить и сделать эталоном»' },
+          { id:'copy_to',     label:'Через «копировать в эталоны» — образец остаётся, в атласе появляется его копия-эталон' },
+          { id:'separate',    label:'Эталоны живут отдельно от обычных образцов — я создаю их специально' },
+        ]
+      },
+      { id:'q13_3', type:'radio',
+        text:'Если по эталону вышла новая редакция (исправили класс/сигнал) — что со старыми кариотипами, которые на него ссылались?',
+        options:[
+          { id:'auto_relink', label:'Автоматически тянут новую версию (всегда последняя)' },
+          { id:'pin_version', label:'Сохраняют ссылку на ту версию, что была на момент сравнения' },
+          { id:'warn',        label:'Программа предупреждает «эталон обновился, обновить ссылку?»' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's14',
+    title: 'Калибровка и метрология',
+    topic: 'Сравнимость данных',
+    badges:['backend','new'],
+    intro:'Длина хромосомы сейчас в пикселях. Без калибровки сравнения между микроскопами/объективами строго говоря некорректны.',
+    questions:[
+      { id:'q14_1', type:'radio',
+        text:'Должна ли программа хранить μm/px калибровку для каждого снимка?',
+        options:[
+          { id:'must',        label:'Да, обязательно — без этого сравнения некорректны' },
+          { id:'optional',    label:'Желательно, но если не указала — пусть работает в пикселях' },
+          { id:'no_need',     label:'Не нужно — мне не критична абсолютная длина, всё равно сравниваю относительно' },
+        ]
+      },
+      { id:'q14_2', type:'radio',
+        text:'Если у тебя несколько микроскопов/объективов — как удобнее задавать масштаб?',
+        options:[
+          { id:'per_microscope', label:'Завести «профиль микроскопа» с зашитым μm/px и выбирать его' },
+          { id:'per_image',   label:'Указывать масштаб каждый раз вручную при импорте' },
+          { id:'auto_meta',   label:'Брать из метаданных снимка автоматически (TIF/CZI)' },
+          { id:'mix',         label:'Из метаданных, иначе из профиля, иначе спросить' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's15',
+    title: 'Автоматизация и AI',
+    topic: 'Где помощник, где запрет',
+    intro:'Программа может «угадывать»: класс хромосомы, центромеру, типы сигналов. Решаем, что подсказка, а что прямое действие.',
+    questions:[
+      { id:'q15_1', type:'checkbox',
+        text:'Где автоматика приемлема как подсказка (с подтверждением экспертом)?',
+        options:[
+          { id:'segment',     label:'Сегментация хромосом по DAPI' },
+          { id:'centromere',  label:'Положение центромеры' },
+          { id:'class_guess', label:'Предположение класса хромосомы по идеограмме' },
+          { id:'signal_count',label:'Подсчёт сигналов в каналах' },
+          { id:'anomaly',     label:'Подсветка возможных аномалий' },
+          { id:'similar',     label:'Поиск похожих хромосом в базе' },
+          { id:'sort',        label:'Авто-раскладка по матрице по уже размеченным классам' },
+        ]
+      },
+      { id:'q15_2', type:'checkbox',
+        text:'Где автоматика категорически запрещена (только эксперт)?',
+        options:[
+          { id:'approve_kar', label:'Утверждение лицевого кариотипа' },
+          { id:'change_class',label:'Смена уже выставленного класса хромосомы' },
+          { id:'add_anomaly', label:'Добавление аномалии на уровне образца' },
+          { id:'export_pub',  label:'Создание публикационного экспорта' },
+          { id:'delete_data', label:'Удаление любых данных' },
+        ]
+      },
+      { id:'q15_3', type:'radio',
+        text:'Должна ли программа показывать «уверенность машины» рядом с подсказкой?',
+        options:[
+          { id:'show_pct',    label:'Да, в процентах/баллах — мне это полезно' },
+          { id:'show_label',  label:'Да, но в виде «низкая/средняя/высокая»' },
+          { id:'no_show',     label:'Нет, цифры будут только мешать' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's16',
+    title: 'Производительность и масштаб',
+    topic: 'Чтобы правильно выбрать БД',
+    badges:['backend'],
+    intro:'Это нужно только чтобы прикинуть масштаб (сколько строк в таблицах, гигабайт в медиа, как индексировать). Если точных цифр нет — пиши «примерно».',
+    questions:[
+      { id:'q16_1', type:'text',
+        text:'Сколько новых образцов появляется у тебя в активный сезон (примерно, в месяц)?'
+      },
+      { id:'q16_2', type:'textarea',
+        text:'Сколько в среднем препаратов с одного образца за всё время? Сколько метафаз с одного препарата? Сколько фоток с одной метафазы?',
+        hint:'Достаточно одной строкой: «препаратов 6–14, метафаз 5–10 на препарат, по 1–2 фотки на метафазу».'
+      },
+    ]
+  },
+
+  {
+    id: 's17',
+    title: 'История изменений и бэкапы',
+    topic: 'Если что-то пошло не так',
+    badges:['backend'],
+    intro:'Локальный exe = ответственность за данные на пользователе. Решаем, что программа делает «сама».',
+    questions:[
+      { id:'q17_1', type:'radio',
+        text:'История изменений (audit log) — насколько подробная нужна?',
+        options:[
+          { id:'full',        label:'По каждому объекту: кто, когда, что поменял' },
+          { id:'critical',    label:'Только по критичному: утверждение, удаление, смена класса, перепривязка препарата' },
+          { id:'no',          label:'Нет, не нужно — захламит интерфейс' },
+        ]
+      },
+      { id:'q17_2', type:'radio',
+        text:'Как часто программа должна делать резервные копии?',
+        options:[
+          { id:'on_change',   label:'После каждого утверждения / экспорта (значимое событие)' },
+          { id:'daily',       label:'Раз в день автоматически' },
+          { id:'on_close',    label:'При закрытии программы' },
+          { id:'manual',      label:'Только когда я сама нажму «бэкап»' },
+        ]
+      },
+      { id:'q17_3', type:'radio',
+        text:'Где хранятся бэкапы?',
+        options:[
+          { id:'same_disk',   label:'Рядом с проектом на том же диске' },
+          { id:'choose_dir',  label:'В папке, которую я укажу (например внешний диск)' },
+          { id:'cloud',       label:'В облаке (Я.Диск, OneDrive и т.п.) если я подключу' },
+          { id:'multi',       label:'И туда, и туда — двойная защита' },
+        ]
+      },
+      { id:'q17_4', type:'radio',
+        text:'Если программа упала во время большой операции (сегментация, экспорт) — что должно случиться при следующем запуске?',
+        options:[
+          { id:'rollback',    label:'Откат всей операции, как будто её не было' },
+          { id:'partial_save',label:'Сохранение того, что успело — с пометкой «незавершённое»' },
+          { id:'ask_resume',  label:'Спросить «продолжить с того места?»' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's18',
+    title: 'Экспорт и публикация',
+    topic: 'Куда уходит готовый кариотип',
+    intro:'Что должно быть в заголовке/подвале готового кариотипа (ID, панель зондов, дата, выравнивание по центромере, чёрный фон, без рамок, без подписи под каждой хромосомой) — ты уже подтвердила.',
+    questions:[
+      { id:'q18_1', type:'checkbox',
+        text:'Какие форматы вывода нужны?',
+        options:[
+          { id:'png',         label:'PNG — для презентаций и быстрых обзоров' },
+          { id:'pdf',         label:'PDF — для отчётов и многостраничных обзоров' },
+          { id:'svg',         label:'SVG — для редактирования в Illustrator перед статьёй' },
+          { id:'tif',         label:'TIF — для печати/типографии' },
+          { id:'csv',         label:'CSV — таблицы (для Excel, статистики)' },
+          { id:'json',        label:'JSON — структурированные данные (для воспроизводимости)' },
+        ]
+      },
+      { id:'q18_2', type:'checkbox',
+        text:'Какие шаблоны экспорта реально нужны?',
+        options:[
+          { id:'overview',    label:'Обзорный кариотип одного образца' },
+          { id:'compare_ref', label:'Сравнение «образец vs эталон»' },
+          { id:'sib_grid',    label:'Сетка сиблингов одного скрещивания' },
+          { id:'poly_one',    label:'Полиморфизм одного класса (по образцам)' },
+          { id:'aberration',  label:'Только аномалии — отдельный плакат' },
+          { id:'summary_csv', label:'Сводная таблица: все аномалии по всем образцам' },
+        ]
+      },
+      { id:'q18_3', type:'radio',
+        text:'Хочешь ли ты, чтобы каждый экспорт сохранял «рецепт» — JSON-файл рядом с картинкой, по которому через год можно собрать ту же картинку заново?',
+        options:[
+          { id:'yes_recipe',  label:'Да — это страховка от «как я это собрала?»' },
+          { id:'embed_only',  label:'Только если он встраивается внутрь файла (не плодя лишние)' },
+          { id:'no_recipe',   label:'Нет, не надо' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's19',
+    title: 'Этикетки и физика',
+    topic: 'Связь с реальной лабораторией',
+    intro:'Образцы и препараты — реальные физические объекты в холодильнике. Если эта тема не твоя — спокойно отвечай «не нужно».',
+    questions:[
+      { id:'q19_1', type:'radio',
+        text:'Печатные этикетки на препараты — нужны?',
+        options:[
+          { id:'qr',          label:'Да, с QR-кодом — отсканировал и сразу карточка препарата' },
+          { id:'text_only',   label:'Да, но только текст — у меня нет принтера для QR' },
+          { id:'no_labels',   label:'Нет, я подписываю стёкла маркером' },
+        ]
+      },
+      { id:'q19_2', type:'radio',
+        text:'Учитывать ли в программе физическое местоположение препарата (холодильник/полка/коробка)?',
+        options:[
+          { id:'yes_strict',  label:'Да, обязательно — каждый препарат должен «жить» где-то' },
+          { id:'yes_optional',label:'Да, но как опция — иногда заполняю, иногда нет' },
+          { id:'no_loc',      label:'Нет — место препарата живёт у меня в голове' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's20',
+    title: 'UX, тема, устройства',
+    topic: 'Как и где будешь работать',
+    intro:'Программа будет жить на ПК учёных в разных условиях. Здесь только то, что реально важно для дизайна.',
+    questions:[
+      { id:'q20_1', type:'radio',
+        text:'Тёмная тема (для работы рядом с микроскопом):',
+        options:[
+          { id:'yes_dark',    label:'Да, нужна — глаза устают на белом' },
+          { id:'auto',        label:'По системной теме Windows автоматически' },
+          { id:'no_dark',     label:'Нет, светлая комфортнее' },
+        ]
+      },
+      { id:'q20_2', type:'checkbox',
+        text:'Языки интерфейса:',
+        options:[
+          { id:'ru',          label:'Русский (основной)' },
+          { id:'en',          label:'Английский (для коллег и публикаций)' },
+          { id:'switch',      label:'Возможность переключать на лету' },
+          { id:'science_terms_en', label:'Русский интерфейс, но научные термины (виды, зонды, классы) — латиницей' },
+        ]
+      },
+      { id:'q20_3', type:'radio',
+        text:'Часто ли работаешь на двух мониторах (например, обзор на одном, разметка на другом)?',
+        options:[
+          { id:'yes_often',   label:'Да, часто — нужна поддержка отдельных окон' },
+          { id:'sometimes',   label:'Иногда — но окно одно, всё в нём' },
+          { id:'no',          label:'Нет, всегда один монитор' },
+        ]
+      },
+      { id:'q20_4', type:'radio',
+        text:'Будешь ли работать на планшете/ноутбуке с пером (для разметки, выпрямления)?',
+        options:[
+          { id:'desktop_only',label:'Нет, только настольный ПК с мышкой' },
+          { id:'laptop_too',  label:'Да на ноутбуке тоже — нужно нормально работать тачпадом' },
+          { id:'tablet_pen',  label:'Да, в лаборатории удобно с пером' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's21',
+    title: 'Обновления и миграции',
+    topic: 'Жизненный цикл exe-программы',
+    badges:['backend'],
+    intro:'Когда выйдет новая версия программы, у тебя уже будет своя база. Что должно с ней произойти?',
+    questions:[
+      { id:'q21_1', type:'radio',
+        text:'Как программа должна обновляться?',
+        options:[
+          { id:'auto_check',  label:'Сама проверять обновление и предлагать установить' },
+          { id:'manual',      label:'Только вручную: я скачиваю новую версию и ставлю' },
+          { id:'lts',         label:'Долгие LTS-версии — обновляться примерно раз в год' },
+        ]
+      },
+      { id:'q21_2', type:'radio',
+        text:'При обновлении со старой версии (где данные в другом формате) — что должно произойти?',
+        options:[
+          { id:'auto_migrate',label:'Автоматическая миграция данных, без вопросов' },
+          { id:'backup_first',label:'Сначала бэкап, потом миграция, отчёт «что изменилось»' },
+          { id:'side_by_side',label:'Старая база рядом, новая отдельно — сравниваю и удаляю старую сама' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's22',
+    title: 'Терминология (как будем называть в UI)',
+    topic: 'Чтобы все говорили на одном языке',
+    badges:['new'],
+    intro:'Сейчас в коде, документации и устных описаниях много синонимов. Их разнобой потом всплывёт в кнопках, шапках и формах. Лучше зафиксировать сейчас.',
+    questions:[
+      { id:'q22_1', type:'radio',
+        text:'Как лучше называть конечный кариотип образца, который пойдёт в статью?',
+        options:[
+          { id:'lic',         label:'«Лицевой кариотип»' },
+          { id:'overview',    label:'«Обзор» / «Обзорный кариотип»' },
+          { id:'final',       label:'«Итоговый кариотип»' },
+          { id:'main',        label:'«Главный кариотип образца»' },
+        ]
+      },
+      { id:'q22_2', type:'radio',
+        text:'Препараты бывают «свежие», «отмытые», «гибридизованные», «отфотканные», «переотмытые». Как лучше показывать в карточке?',
+        options:[
+          { id:'one_card',    label:'Одна карточка препарата + история состояний внутри (стейт-машина)' },
+          { id:'each_stain',  label:'Карточка препарата + отдельные карточки на каждый цикл «отмыв→гибр→фото»' },
+          { id:'flat_list',   label:'Просто плоский список событий — без отдельных карточек' },
+        ]
+      },
+      { id:'q22_3', type:'radio',
+        text:'«Метафаза», «снимок», «фотка», «пластинка» — это для тебя:',
+        options:[
+          { id:'all_one',     label:'Одно и то же, выберем один термин (метафаза)' },
+          { id:'meta_logical',label:'Метафаза — логическая единица (одна реальная пластинка под микроскопом), снимок — её фото; одной метафазе может соответствовать несколько снимков' },
+          { id:'split',       label:'Это разные вещи на разных этапах (опишу в уточнении)' },
+        ]
+      },
+    ]
+  },
+
+  {
+    id: 's23',
+    title: 'Свободная зона',
+    topic: 'Всё, что не вошло выше',
+    questions:[
+      { id:'q23_1', type:'textarea',
+        text:'Что важное мы забыли спросить вообще? О чём ты сама думала, но я не задал вопроса?'
+      },
+      { id:'q23_2', type:'textarea',
+        text:'«Было бы здорово, если бы…» — любые мечты и фантазии. Хоть три, хоть тридцать.'
+      },
+      { id:'q23_3', type:'textarea',
+        text:'Что вызывает у тебя главное беспокойство по поводу будущей программы?'
+      },
+      { id:'q23_4', type:'textarea',
+        text:'Если бы можно было оставить только одну фичу — какую? А выбросить?'
+      },
+    ]
+  },
+];
+
+/* ====================== РЕНДЕР ====================== */
+const STORAGE_KEY = 'karyolab_concept_questionnaire_v2';
+const tocList = document.getElementById('tocList');
+const sectionsHost = document.getElementById('sections');
+
+let answers = loadAnswers();
+
+function loadAnswers(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+
+function saveAnswers(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
+  updateProgress();
+  updateLastSaved();
+}
+
+function updateLastSaved(){
+  const n = document.getElementById('lastSaved');
+  if(!n) return;
+  const d = new Date();
+  n.textContent = d.toLocaleTimeString();
+}
+
+function el(tag, props={}, ...children){
+  const e = document.createElement(tag);
+  for(const k in props){
+    if(k==='class') e.className = props[k];
+    else if(k==='html') e.innerHTML = props[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), props[k]);
+    else e.setAttribute(k, props[k]);
+  }
+  for(const c of children){
+    if(c==null) continue;
+    if(typeof c==='string') e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  }
+  return e;
+}
+
+function buildSection(sec){
+  const node = el('section', { class:'sec', id:sec.id });
+  const head = el('h2', {});
+  const numText = sec.id.replace(/^s/, '');
+  head.appendChild(el('span', { class:'num' }, '§ '+numText));
+  head.appendChild(document.createTextNode(' '+sec.title));
+  if(sec.badges){
+    for(const b of sec.badges){
+      const labels = { crit:'критично', new:'новое', backend:'backend' };
+      head.appendChild(el('span', { class:'badge '+b }, labels[b] || b));
+    }
+  }
+  node.appendChild(head);
+
+  if(sec.topic) node.appendChild(el('div', { class:'desc' }, sec.topic));
+  if(sec.intro) node.appendChild(el('div', { class:'desc' }, sec.intro));
+  if(sec.quote) node.appendChild(el('div', { class:'quote', html:'Из обсуждений: '+escapeHtml(sec.quote) }));
+  if(sec.why)   node.appendChild(el('div', { class:'why' }, sec.why));
+  if(sec.why_list){
+    const ul = el('ul', { class:'bullets' });
+    sec.why_list.forEach(li => ul.appendChild(el('li', {}, li)));
+    node.appendChild(ul);
+  }
+
+  for(const q of sec.questions){
+    node.appendChild(buildQuestion(q));
+  }
+  return node;
+}
+
+function buildQuestion(q){
+  const w = el('div', { class:'q', id:'q-'+q.id });
+  const head = el('div', { class:'qhead' });
+  head.appendChild(el('span', { class:'qid' }, q.id.toUpperCase().replace('_','.')));
+  head.appendChild(el('span', { class:'qtext' }, q.text));
+  w.appendChild(head);
+  if(q.hint) w.appendChild(el('div', { class:'qhint' }, q.hint));
+
+  if(q.type==='radio' || q.type==='checkbox'){
+    const opts = el('div', { class:'opts' });
+    const inputType = q.type;
+    const groupName = q.id;
+    for(const o of q.options){
+      const lab = el('label', {});
+      const inp = el('input', { type:inputType, name:groupName, value:o.id });
+      const isChecked = isOptChecked(q, o.id);
+      if(isChecked){ inp.checked = true; lab.classList.add('checked'); }
+      inp.addEventListener('change', ()=>{
+        if(inputType==='radio'){
+          answers[q.id] = o.id;
+          opts.querySelectorAll('label').forEach(l=>l.classList.remove('checked'));
+          lab.classList.add('checked');
+        } else {
+          const arr = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+          if(inp.checked){
+            if(!arr.includes(o.id)) arr.push(o.id);
+            lab.classList.add('checked');
+          } else {
+            const idx = arr.indexOf(o.id);
+            if(idx>=0) arr.splice(idx,1);
+            lab.classList.remove('checked');
+          }
+          answers[q.id] = arr;
+        }
+        saveAnswers();
+      });
+      lab.appendChild(inp);
+      lab.appendChild(el('span', { class:'opt-text' }, o.label));
+      opts.appendChild(lab);
+    }
+    w.appendChild(opts);
+
+    const freeId = q.id+'__free';
+    const ft = el('div', { class:'freetext' });
+    ft.appendChild(el('label', {}, 'Свой ответ / уточнение (необязательно):'));
+    const ta = el('textarea', { rows:'2', placeholder:'если хочешь — напиши свой вариант или уточни выбор' });
+    ta.value = answers[freeId] || '';
+    ta.addEventListener('input', ()=>{ answers[freeId] = ta.value; saveAnswers(); });
+    ft.appendChild(ta);
+    w.appendChild(ft);
+
+  } else if(q.type==='textarea'){
+    const ta = el('textarea', { rows:'3', placeholder:'напиши ответ здесь...' });
+    ta.value = answers[q.id] || '';
+    ta.addEventListener('input', ()=>{ answers[q.id] = ta.value; saveAnswers(); });
+    w.appendChild(ta);
+
+  } else if(q.type==='text'){
+    const ti = el('input', { type:'text', placeholder:'короткий ответ...' });
+    ti.value = answers[q.id] || '';
+    ti.addEventListener('input', ()=>{ answers[q.id] = ti.value; saveAnswers(); });
+    w.appendChild(ti);
+  }
+  return w;
+}
+
+function isOptChecked(q, optId){
+  const v = answers[q.id];
+  if(q.type==='radio') return v === optId;
+  if(q.type==='checkbox') return Array.isArray(v) && v.includes(optId);
+  return false;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function buildToc(){
+  for(const s of DATA){
+    const numText = s.id.replace(/^s/, '');
+    const a = el('a', { href:'#'+s.id }, '§ '+numText+' — '+s.title);
+    tocList.appendChild(a);
+  }
+}
+
+function updateProgress(){
+  let total = 0, filled = 0;
+  for(const s of DATA){
+    for(const q of s.questions){
+      total++;
+      if(q.type==='checkbox'){
+        if((Array.isArray(answers[q.id]) && answers[q.id].length>0) || (answers[q.id+'__free']||'').trim()) filled++;
+      } else if(q.type==='radio'){
+        if(answers[q.id] || (answers[q.id+'__free']||'').trim()) filled++;
+      } else {
+        if(answers[q.id] && String(answers[q.id]).trim().length>0) filled++;
+      }
+    }
+  }
+  document.getElementById('progressNum').textContent = filled;
+  document.getElementById('progressTotal').textContent = total;
+  const bar = document.getElementById('progressBar');
+  bar.style.width = (total>0 ? Math.round(filled/total*100) : 0)+'%';
+}
+
+/* ====================== НАВИГАЦИЯ ПО РАЗДЕЛАМ ====================== */
+function buildSectionList(){
+  const host = document.getElementById('sectionList');
+  if(!host) return;
+  host.innerHTML = '';
+  const top = el('button', { type:'button', 'data-target':'__top', onclick:()=>goSection('__top') }, '↑ Начало анкеты');
+  host.appendChild(top);
+  for(const s of DATA){
+    const num = s.id.replace(/^s/, '');
+    const btn = el('button', {
+      type:'button',
+      'data-target': s.id,
+      onclick: ()=>goSection(s.id)
+    }, '§ '+num+' — '+s.title);
+    host.appendChild(btn);
+  }
+}
+
+function goSection(target){
+  closePop();
+  if(target === '__top'){ window.scrollTo({ top:0, behavior:'smooth' }); return; }
+  document.getElementById(target)?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function currentSectionIndex(){
+  const topbar = document.querySelector('.topbar');
+  const offset = (topbar?.offsetHeight ?? 0) + 28;
+  const y = window.scrollY + offset;
+  let idx = 0;
+  for(let i=0;i<DATA.length;i++){
+    const node = document.getElementById(DATA[i].id);
+    if(node && node.offsetTop <= y) idx = i;
+  }
+  return idx;
+}
+
+function highlightActiveSection(){
+  const host = document.getElementById('sectionList');
+  if(!host) return;
+  const activeId = window.scrollY < 220 ? '__top' : (DATA[currentSectionIndex()]?.id ?? '__top');
+  for(const b of host.querySelectorAll('button')){
+    b.classList.toggle('is-active', b.dataset.target === activeId);
+  }
+}
+
+function jumpSection(delta){
+  const idx = currentSectionIndex();
+  const next = Math.max(0, Math.min(DATA.length - 1, idx + delta));
+  document.getElementById(DATA[next].id)?.scrollIntoView({ behavior:'smooth', block:'start' });
+  highlightActiveSection();
+}
+
+/* ====================== ВЫПАДАЮЩИЕ МЕНЮ ====================== */
+function togglePop(id){
+  const me = document.getElementById(id);
+  document.querySelectorAll('.popmenu').forEach(p=>{
+    if(p!==me) p.classList.remove('open');
+  });
+  const willOpen = !me.classList.contains('open');
+  me.classList.toggle('open', willOpen);
+  const trigger = me.querySelector('button');
+  if(trigger) trigger.setAttribute('aria-expanded', String(willOpen));
+  if(willOpen && id==='navMenu') highlightActiveSection();
+}
+function closePop(){
+  document.querySelectorAll('.popmenu').forEach(p=>{
+    p.classList.remove('open');
+    const t = p.querySelector('button');
+    if(t) t.setAttribute('aria-expanded','false');
+  });
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('.popmenu')) return;
+  closePop();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closePop();
+});
+
+/* ====================== РЕНДЕР ====================== */
+buildToc();
+buildSectionList();
+for(const s of DATA){ sectionsHost.appendChild(buildSection(s)); }
+updateProgress();
+updateLastSaved();
+
+window.addEventListener('scroll', ()=>{
+  if(document.getElementById('navMenu').classList.contains('open')) highlightActiveSection();
+}, { passive:true });
+
+/* ====================== ЭКСПОРТ В MD ====================== */
+function findOptionLabel(qid, optId){
+  for(const s of DATA){
+    for(const q of s.questions){
+      if(q.id===qid && q.options){
+        const o = q.options.find(o=>o.id===optId);
+        if(o) return o.label;
+      }
+    }
+  }
+  return optId;
+}
+
+function buildMarkdown(){
+  const ts = new Date().toISOString().slice(0,19).replace('T',' ');
+  let md = `# Ответы Лизы — KaryoLab, концептуальная анкета\n\n`;
+  md += `Дата: ${ts}\n`;
+  md += `Формат: KaryoLab Questionnaire v1\n\n`;
+  for(const s of DATA){
+    md += `\n---\n\n## ${s.title}\n\n`;
+    if(s.topic) md += `_тема: ${s.topic}_\n\n`;
+    if(s.quote) md += `> ${s.quote}\n\n`;
+    if(s.why)   md += `_${s.why}_\n\n`;
+    for(const q of s.questions){
+      md += `### ${q.id.toUpperCase().replace('_','.')} — ${q.text}\n\n`;
+      if(q.type==='checkbox'){
+        const v = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        const free = answers[q.id+'__free'] || '';
+        if(v.length===0 && !free){ md += `_— ответа нет —_\n\n`; continue; }
+        if(v.length>0){
+          md += v.map(id=>`- [x] ${findOptionLabel(q.id,id)}`).join('\n') + '\n';
+        }
+        if(free) md += `\n**Уточнение:** ${free}\n`;
+        md += '\n';
+      } else if(q.type==='radio'){
+        const v = answers[q.id];
+        const free = answers[q.id+'__free'] || '';
+        if(!v && !free){ md += `_— ответа нет —_\n\n`; continue; }
+        if(v) md += `**Ответ:** ${findOptionLabel(q.id, v)}\n\n`;
+        if(free) md += `**Уточнение:** ${free}\n\n`;
+      } else {
+        const v = answers[q.id] || '';
+        if(!v){ md += `_— ответа нет —_\n\n`; continue; }
+        md += v.split('\n').map(l=>'> '+l).join('\n')+'\n\n';
+      }
+    }
+  }
+  return md;
+}
+
+function downloadFile(name, content, mime='text/plain;charset=utf-8'){
+  const blob = new Blob([content], { type:mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 200);
+}
+
+function buildPlainText(){
+  const md = buildMarkdown();
+  return md
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/^\s*>\s?/gm, '    ')
+    .replace(/^---\s*$/gm, '────────────────────────────')
+    .replace(/^_—\s*ответа\s*нет\s*—_/gm, '— ответа нет —')
+    .replace(/^_(.+?)_\s*$/gm, '$1')
+    .replace(/^-\s+\[x\]\s+/gmi, '  ✓ ')
+    .replace(/^-\s+\[\s\]\s+/gmi, '  · ');
+}
+
+function downloadAnswers(format){
+  closePop();
+  const date = new Date().toISOString().slice(0,10);
+  if(format === 'txt'){
+    downloadFile(`karyolab_концепция_${date}.txt`, buildPlainText(), 'text/plain;charset=utf-8');
+  } else {
+    downloadFile(`karyolab_концепция_${date}.md`, buildMarkdown(), 'text/markdown;charset=utf-8');
+  }
+}
+
+function showError(msg){
+  const t = document.getElementById('toastError');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 4500);
+}
+</script>
+</body>
+</html>

@@ -1,8 +1,12 @@
 import type {
+  AnomalyTypeMeta,
+  AtlasProbe,
+  ChromosomeClassDef,
   ChromosomeLayer,
   ChromosomeObject,
   ExportJob,
   ExportTemplate,
+  Fluorochrome,
   FreeEvent,
   GenomeLayout,
   GerminationEvent,
@@ -19,7 +23,10 @@ import type {
   Sample,
   SampleKaryotype,
   SlideEvent,
+  SpeciesDef,
   StainedPreparation,
+  SubgenomeDef,
+  TheoreticalRecord,
   TiltEntry,
   WashEvent,
 } from "./types";
@@ -305,8 +312,21 @@ export const initialPreparations: Preparation[] = [
     status: "rehyb_ready",
     fridge: "F-03",
     box: "BX-15",
-    stainCycle: 1,
-    comment: "Готов к повторной гибридизации.",
+    stainCycle: 2,
+    comment: "Переотмыт после второго цикла гибридизации, готов к новой окраске.",
+  },
+  {
+    id: "1988.55.1.2",
+    sampleId: "1988.55",
+    source: { kind: "plant", plantId: "1988.55.1" },
+    createdAt: `${yyyy}-${String(mm).padStart(2, "0")}-04`,
+    quality: "high",
+    status: "photographed_undecided",
+    fridge: "F-02",
+    box: "BX-12",
+    stainCycle: 0,
+    comment:
+      "Сфотографирован, судьба не решена — ждёт оператора для решения «переотмыть/выбросить».",
   },
   {
     id: "2045.66.1.1",
@@ -369,11 +389,34 @@ export const initialStained: StainedPreparation[] = [
     probes: [
       { name: "GAA", channel: "green" },
       { name: "pAs1", channel: "red" },
+    ],
+    hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 2)).padStart(2, "0")}-12`,
+    status: "closed_wash",
+    fate: "washed",
+  },
+  {
+    id: "2234.12.1.1.2",
+    preparationId: "2234.12.1.1",
+    cycleNumber: 2,
+    probes: [
       { name: "pAs119", channel: "red" },
+      { name: "GAA", channel: "green" },
     ],
     hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-15`,
     status: "closed_wash",
     fate: "washed",
+  },
+  {
+    id: "1988.55.1.2.1",
+    preparationId: "1988.55.1.2",
+    cycleNumber: 1,
+    probes: [
+      { name: "pAs1", channel: "red" },
+      { name: "GAA", channel: "green" },
+    ],
+    hybridizationDate: `${yyyy}-${String(Math.max(1, mm - 1)).padStart(2, "0")}-20`,
+    status: "photographed_undecided",
+    fate: "undecided",
   },
   {
     id: "2045.66.1.1.1",
@@ -1036,15 +1079,66 @@ const LAYOUT_1772: GenomeLayout = {
 const SAMPLE_KARYOTYPE_1772: SampleKaryotype = {
   id: "1772.01.kar.1",
   sampleId: "1772.01",
-  title: "Лицевой кариотип S-1772.01 · pAs1 + GAA",
+  title: "Кариотип образца S-1772.01 · pAs1 + GAA",
   status: "exported",
   layoutId: LAYOUT_1772.id,
   level: "hybridization",
+  kind: "sample",
   selectedChromosomeIds: batch1772.chromosomes.map((c) => c.id),
+  snapshot: batch1772.chromosomes.map((c) => ({
+    chromosomeId: c.id,
+    metaphaseId: c.metaphaseId,
+    stainedId: c.stainedId,
+    displayName: c.displayName,
+    subgenome: c.subgenome,
+    chromosomeClass: c.chromosomeClass,
+    imageSeed: c.imageSeed,
+    maskSizePx: c.maskSizePx,
+    ideogramId: c.ideogramId,
+  })),
   main: true,
   createdAt: RESULT_DATE,
   approvedAt: RESULT_DATE,
   exportIds: ["EXJ-1772-1"],
+  isReference: true,
+  referenceLabel: "Чайниз Спринг (мок)",
+  referenceScope: "species",
+  referenceSource: "lab",
+  referenceNotes: "Кариотип образца T. aestivum, демонстрация",
+};
+
+const SAMPLE_KARYOTYPE_1772_META: SampleKaryotype = {
+  id: "1772.01.kar.m1",
+  sampleId: "1772.01",
+  title: "Кариотип метафазы 1772.01.1.1.1.m1",
+  status: "approved",
+  layoutId: LAYOUT_1772.id,
+  level: "metaphase",
+  kind: "metaphase",
+  selectedChromosomeIds: batch1772.chromosomes.slice(0, 21).map((c) => c.id),
+  main: false,
+  createdAt: RESULT_DATE,
+  approvedAt: RESULT_DATE,
+  exportIds: [],
+};
+
+const SAMPLE_KARYOTYPE_2045_REF: SampleKaryotype = {
+  id: "2045.66.kar.1",
+  sampleId: "2045.66",
+  title: "Кариотип образца S-2045.66 · Эталон Aegilops",
+  status: "approved",
+  layoutId: LAYOUT_2045.id,
+  level: "metaphase",
+  kind: "sample",
+  selectedChromosomeIds: batch2045.chromosomes.slice(0, 6).map((c) => c.id),
+  main: false,
+  createdAt: KAR_DATE_FULL,
+  approvedAt: KAR_DATE_FULL,
+  exportIds: [],
+  isReference: true,
+  referenceLabel: "Безостая 1 (мок)",
+  referenceScope: "species",
+  referenceSource: "lab",
 };
 
 const EXPORT_JOB_1772: ExportJob = {
@@ -1058,11 +1152,11 @@ const EXPORT_JOB_1772: ExportJob = {
     alignByCentromere: true,
     showProbeLabels: true,
     showAnomalyLabels: true,
-    format: "png",
+    format: "tiff",
     quality: "publication",
   },
   status: "done",
-  fileName: `S-1772.01_standard_overview_${yyyy - 1}-11-04.png`,
+  fileName: `S-1772.01_standard_overview_${yyyy - 1}-11-04.tiff`,
   createdAt: RESULT_DATE,
 };
 
@@ -1126,7 +1220,11 @@ export const initialIdeograms: Ideogram[] = [
 
 export const initialGenomeLayouts: GenomeLayout[] = [LAYOUT_2045, LAYOUT_1772];
 
-export const initialSampleKaryotypes: SampleKaryotype[] = [SAMPLE_KARYOTYPE_1772];
+export const initialSampleKaryotypes: SampleKaryotype[] = [
+  SAMPLE_KARYOTYPE_1772,
+  SAMPLE_KARYOTYPE_1772_META,
+  SAMPLE_KARYOTYPE_2045_REF,
+];
 
 export const initialExportJobs: ExportJob[] = [EXPORT_JOB_1772];
 
@@ -1174,3 +1272,170 @@ export const DEMO_PSD_LAYERS_1730: ChromosomeLayer[] = (() => {
 })();
 
 export const DEMO_PSD_FILE_1730 = "1730.25-GAA+pAs119+pAs1-21-112.14.psd";
+
+/* ================================================================== */
+/* Атлас: справочники                                                  */
+/* ================================================================== */
+
+export const initialFluorochromes: Fluorochrome[] = [
+  { id: "FL-FITC", name: "FITC", channel: "green", description: "Зелёный флюорохром, возбуждение ~488 нм." },
+  { id: "FL-TR", name: "Texas Red", channel: "red", description: "Красный флюорохром, возбуждение ~595 нм." },
+  { id: "FL-CY3", name: "Cy3", channel: "red", description: "Цианиновый красный флюорохром." },
+  { id: "FL-CY5", name: "Cy5", channel: "red", description: "Иногда заменяет красный канал." },
+  { id: "FL-DAPI", name: "DAPI", channel: "blue", description: "Контрокраска ДНК.", isCounterstain: true },
+  { id: "FL-AF488", name: "AlexaFluor 488", channel: "green", description: "Альтернатива FITC." },
+];
+
+export const initialAtlasProbes: AtlasProbe[] = [
+  { id: "AP-pAs1", name: "pAs1", fluorochromeId: "FL-TR", target: "теломерный повтор", manufacturer: "Internal lab" },
+  { id: "AP-pAs119", name: "pAs119", fluorochromeId: "FL-CY3", target: "теломерный повтор" },
+  { id: "AP-GAA", name: "GAA", fluorochromeId: "FL-FITC", target: "(GAA)n микросателлит" },
+  { id: "AP-DAPI", name: "DAPI", fluorochromeId: "FL-DAPI", target: "AT-обогащённые регионы", notes: "Контрокраска" },
+  { id: "AP-GFP", name: "GFP", fluorochromeId: "FL-AF488", target: "демонстрационный" },
+  { id: "AP-RFP", name: "RFP", fluorochromeId: "FL-TR", target: "демонстрационный" },
+];
+
+export const initialSubgenomes: SubgenomeDef[] = [
+  { id: "SG-A", letter: "A", name: "A-геном пшеницы", description: "Donor: T. urartu" },
+  { id: "SG-B", letter: "B", name: "B-геном пшеницы", description: "Donor: близок к Aegilops speltoides" },
+  { id: "SG-D", letter: "D", name: "D-геном пшеницы", description: "Donor: Aegilops tauschii" },
+  { id: "SG-R", letter: "R", name: "R-геном ржи", description: "Secale cereale" },
+  { id: "SG-U", letter: "U", name: "U-геном Aegilops umbellulata" },
+  { id: "SG-M", letter: "M", name: "M-геном Aegilops comosa" },
+];
+
+export const initialSpecies: SpeciesDef[] = [
+  {
+    id: "SP-aestivum",
+    name: "пшеница мягкая",
+    latinName: "T. aestivum",
+    comment: "Гексаплоид 2n=42",
+    ploidy: 6,
+    expectedChromosomeCount: 42,
+    templates: [
+      { id: "ST-aestivum-default", name: "Стандарт ABD", subgenomes: ["A", "B", "D"], classCount: 7 },
+      { id: "ST-aestivum-1bs", name: "С замещением 1RS.1BL", subgenomes: ["A", "B", "D", "R"], classCount: 7 },
+    ],
+  },
+  {
+    id: "SP-dicoccum",
+    name: "пшеница двузернянка",
+    latinName: "T. dicoccum",
+    ploidy: 4,
+    expectedChromosomeCount: 28,
+    templates: [{ id: "ST-dicoccum-default", name: "Стандарт AB", subgenomes: ["A", "B"], classCount: 7 }],
+  },
+  {
+    id: "SP-cereale",
+    name: "рожь",
+    latinName: "S. cereale",
+    ploidy: 2,
+    expectedChromosomeCount: 14,
+    templates: [{ id: "ST-cereale-default", name: "Стандарт R", subgenomes: ["R"], classCount: 7 }],
+  },
+  {
+    id: "SP-speltoides",
+    name: "Aegilops speltoides",
+    latinName: "Ae. speltoides",
+    ploidy: 2,
+    expectedChromosomeCount: 14,
+    templates: [{ id: "ST-speltoides-default", name: "Стандарт S", subgenomes: ["S"], classCount: 7 }],
+  },
+  {
+    id: "SP-urartu",
+    name: "Triticum urartu",
+    latinName: "T. urartu",
+    ploidy: 2,
+    expectedChromosomeCount: 14,
+    templates: [{ id: "ST-urartu-default", name: "Стандарт A", subgenomes: ["A"], classCount: 7 }],
+  },
+];
+
+export const initialChromosomeClasses: ChromosomeClassDef[] = (() => {
+  const out: ChromosomeClassDef[] = [];
+  const subs: { id: string; letter: string }[] = [
+    { id: "SG-A", letter: "A" },
+    { id: "SG-B", letter: "B" },
+    { id: "SG-D", letter: "D" },
+  ];
+  for (const sg of subs) {
+    for (let n = 1; n <= 7; n++) {
+      out.push({
+        id: `CC-${n}${sg.letter}`,
+        label: `${n}${sg.letter}`,
+        subgenomeId: sg.id,
+        classNumber: n,
+        type: "standard",
+      });
+    }
+  }
+  out.push({
+    id: "CC-1RS-1BL",
+    label: "1RS.1BL",
+    subgenomeId: "SG-B",
+    classNumber: 1,
+    type: "translocation",
+    description: "Транслокация ржи 1RS на 1BL пшеницы.",
+  });
+  out.push({
+    id: "CC-5D-5R",
+    label: "5D(5R)",
+    subgenomeId: "SG-D",
+    classNumber: 5,
+    type: "substitution",
+    synonyms: ["5D-5R", "subst 5D"],
+  });
+  return out;
+})();
+
+export const initialAnomalyTypes: AnomalyTypeMeta[] = [
+  { code: "trisomy", label: "трисомия", description: "Три копии хромосомы вместо двух.", defaultLevel: "metaphase", markerColor: "amber", markerShape: "tri" },
+  { code: "aneuploidy", label: "анеуплоидия", description: "Изменение числа отдельных хромосом.", defaultLevel: "metaphase", markerColor: "amber", markerShape: "tri" },
+  { code: "monosomy", label: "моносомия", description: "Одна копия вместо двух.", defaultLevel: "metaphase", markerColor: "amber", markerShape: "tri" },
+  { code: "nullisomy", label: "нуллисомия", description: "Полное отсутствие пары.", defaultLevel: "metaphase", markerColor: "amber", markerShape: "tri" },
+  { code: "substitution", label: "замещение", description: "Замена хромосомы из чужого субгенома.", defaultLevel: "chromosome", markerColor: "blue", markerShape: "tri" },
+  { code: "translocation", label: "транслокация", description: "Перестановка участков между хромосомами.", defaultLevel: "chromosome", markerColor: "blue", markerShape: "tri" },
+  { code: "atypical_block", label: "нетипичный блок", description: "Аномальный блок сигнала.", defaultLevel: "chromosome", markerColor: "red", markerShape: "tri" },
+  { code: "missing_signal", label: "отсутствие сигнала", description: "Сигнал не виден там, где ожидается.", defaultLevel: "hybridization", markerColor: "red", markerShape: "tri" },
+  { code: "foreign_material", label: "чужеродный материал", description: "Чужеродные хромосомы или фрагменты.", defaultLevel: "metaphase", markerColor: "red", markerShape: "tri" },
+  { code: "doubtful", label: "сомнительный объект", description: "Объект под вопросом, требует проверки.", defaultLevel: "chromosome", markerColor: "slate", markerShape: "circle" },
+];
+
+export const initialTheoreticalRecords: TheoreticalRecord[] = [
+  {
+    id: "TH-1",
+    title: "Вариант 5D у T. dicoccum (Smith et al. 2018)",
+    scope: { kind: "taxon", ref: "SP-dicoccum" },
+    sourceType: "literature",
+    source: "Smith J. et al., Plant Genome 2018, p.123",
+    description: "Описан вариант хромосомы 5D с дополнительным блоком сигнала pAs1.",
+    relatedClassIds: ["CC-5D-5R"],
+    createdAt: `${yyyy - 1}-12-04T09:00:00`,
+  },
+  {
+    id: "TH-2",
+    title: "Гипотеза 1RS.1BL у локальной линии",
+    scope: { kind: "sample", ref: "1730.25" },
+    sourceType: "hypothesis",
+    description: "Возможна транслокация 1RS.1BL — требуется подтверждение.",
+    relatedClassIds: ["CC-1RS-1BL"],
+    createdAt: `${yyyy}-01-12T15:30:00`,
+  },
+  {
+    id: "TH-3",
+    title: "Теоретическая идеограмма R-генома",
+    scope: { kind: "taxon", ref: "SP-cereale" },
+    sourceType: "note",
+    description: "Идеограмма стандартного R-генома для сверки.",
+    createdAt: `${yyyy - 1}-08-22T11:00:00`,
+  },
+  {
+    id: "TH-4",
+    title: "Протокол сигналов GAA на 5D",
+    scope: { kind: "taxon", ref: "SP-aestivum" },
+    sourceType: "protocol",
+    description: "Стандартный паттерн сигналов GAA на хромосоме 5D пшеницы.",
+    relatedProbeIds: ["AP-GAA"],
+    createdAt: `${yyyy}-02-19T10:00:00`,
+  },
+];

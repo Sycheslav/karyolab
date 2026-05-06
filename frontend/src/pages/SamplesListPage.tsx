@@ -18,6 +18,7 @@ const STATUS_LABEL: Record<SampleStatus, string> = {
   germinating: "Проращивается",
   in_work: "В работе",
   result: "Есть результат",
+  archived: "Архивный",
 };
 
 const STATUS_TONE: Record<SampleStatus, "default" | "mint" | "green" | "amber" | "blue"> = {
@@ -26,6 +27,7 @@ const STATUS_TONE: Record<SampleStatus, "default" | "mint" | "green" | "amber" |
   germinating: "blue",
   in_work: "amber",
   result: "green",
+  archived: "default",
 };
 
 const STATUS_FILTERS: Array<{

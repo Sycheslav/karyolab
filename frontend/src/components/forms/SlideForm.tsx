@@ -11,8 +11,7 @@ import SectionTitle from "@/components/ui/SectionTitle";
 import StorageFields from "./StorageFields";
 import { FlaskConical, Info, Plus } from "lucide-react";
 import { classNames } from "@/lib/utils";
-import { mixPlantId, nextChildId } from "@/lib/naming";
-import type { Preparation, PreparationSource, Quality } from "@/lib/types";
+import type { PreparationSource, Quality } from "@/lib/types";
 
 interface Props {
   defaultDate?: string;
@@ -20,10 +19,9 @@ interface Props {
 
 export default function SlideForm({ defaultDate }: Props) {
   const nav = useNavigate();
-  const addEvent = useStore((s) => s.addEvent);
+  const createSlideEvent = useStore((s) => s.createSlideEvent);
   const samples = useStore((s) => s.samples);
   const plants = useStore((s) => s.plants);
-  const preparations = useStore((s) => s.preparations);
 
   const [sampleId, setSampleId] = useState(samples[0]?.id ?? "");
   const sPlants = useMemo(
@@ -63,76 +61,25 @@ export default function SlideForm({ defaultDate }: Props) {
       toast.error("Выберите конкретное растение или режим «смесь растений»");
       return;
     }
-    // id ивента — служебный (`EV-SL-…`), а вот id препарата теперь
-    // канонический: `<plant>.<n>` или `<sample>.0.<n>` для смеси (правка 0).
-    const id = `EV-SL-${Date.now()}`;
-    const parentPlantId =
-      sourceKind === "mix" ? mixPlantId(sampleId) : plantId;
-    const takenPrepIds = preparations
-      .filter((p) => p.id.startsWith(parentPlantId + "."))
-      .map((p) => p.id);
-    const prepId = nextChildId(parentPlantId, "preparation", takenPrepIds);
     const source = buildSource();
-    addEvent(
-      {
-        id,
-        type: "slide",
-        title:
-          source.kind === "mix"
-            ? `Создание препарата · смесь растений S-${sampleId}`
-            : `Создание препарата · S-${sampleId}`,
-        sampleId,
-        source,
-        quality,
-        storageJar: jar,
-        storageFridge: fridge,
-        preparationIds: [prepId],
-        // Дата создания препарата задаётся пользователем (правка 7).
-        startDate: `${date}T${time}:00`,
-        operator: "Лаборант",
-        status: "completed",
-        comment,
-        createdAt: new Date().toISOString(),
-      },
-      [
-        { ts: new Date().toISOString(), title: `Создан препарат ${prepId}` },
-        {
-          ts: new Date().toISOString(),
-          title: `Качество: ${qualityLabel(quality)}`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title:
-            source.kind === "mix"
-              ? "Источник: смесь растений"
-              : `Источник: ${plants.find((p) => p.id === plantId)?.name ?? plantId}`,
-        },
-      ]
-    );
-    // Также добавляем сам препарат в стор, чтобы счётчики прогресса/ссылки
-    // моментально отражали новый объект.
-    const newPrep: Preparation = {
-      id: prepId,
+    const { eventId, preparationIds } = createSlideEvent({
       sampleId,
       source,
-      createdAt: `${date}T${time}:00`,
       quality,
-      status: "created",
-      fridge,
-      box: jar,
+      storageJar: jar,
+      storageFridge: fridge,
+      count: 1,
+      operator: "Лаборант",
       comment,
-      stainCycle: 0,
-    };
-    useStore.setState((st) => ({
-      preparations: [newPrep, ...st.preparations],
-    }));
+      startDate: `${date}T${time}:00`,
+    });
+    void preparationIds;
     toast.success("Препарат создан");
     if (createAnother) {
-      // Не меняем образец и хранение — упрощаем «ещё один от этого образца».
       setComment("");
       return;
     }
-    nav(`/журнал/ивент/${id}`);
+    nav(`/журнал/ивент/${eventId}`);
   }
 
   return (

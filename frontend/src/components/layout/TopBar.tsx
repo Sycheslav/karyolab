@@ -12,10 +12,10 @@ export default function TopBar() {
   else if (p.startsWith("/журнал/ивент")) crumb = "Карточка ивента";
   else if (p.startsWith("/журнал/образец")) crumb = "Карточка образца";
   else if (p.startsWith("/кариотип/импорт")) crumb = "Кариотип · Импорт";
-  else if (p.startsWith("/кариотип/разметка-хромосом"))
-    crumb = "Кариотип · Разметка хромосом";
-  else if (p.startsWith("/кариотип/разметка-генома"))
+  else if (p.startsWith("/кариотип/разметка/геном"))
     crumb = "Кариотип · Разметка генома";
+  else if (p.startsWith("/кариотип/разметка"))
+    crumb = "Кариотип · Разметка хромосом";
   else if (p.startsWith("/кариотип/экспорт")) crumb = "Кариотип · Экспорт";
   else if (p.startsWith("/кариотип")) crumb = "Кариотип";
   else if (p.startsWith("/атлас")) crumb = "Атлас";

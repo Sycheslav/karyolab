@@ -19,7 +19,9 @@ interface Props {
 export default function HybridizationForm({ defaultDate }: Props) {
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const addEvent = useStore((s) => s.addEvent);
+  const createHybridizationEvent = useStore(
+    (s) => s.createHybridizationEvent
+  );
   const preps = useStore((s) => s.preparations);
   const stained = useStore((s) => s.stained);
   const events = useStore((s) => s.events);
@@ -80,38 +82,16 @@ export default function HybridizationForm({ defaultDate }: Props) {
       toast.error("Добавьте хотя бы один зонд");
       return;
     }
-    const id = `EV-HYB-${Date.now()}`;
-    addEvent(
-      {
-        id,
-        type: "hybridization",
-        title: `Гибридизация · Партия ${batchName}`,
-        batchName,
-        preparationIds: ids,
-        probes,
-        startDate: `${date}T10:00:00`,
-        endDate: `${date}T10:00:00`,
-        operator: "Лаборант",
-        status: "active",
-        createdAt: new Date().toISOString(),
-      },
-      [
-        {
-          ts: new Date().toISOString(),
-          title: `Создано окрашиваний: ${ids.length}`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title: `Зонды: ${probes.map((p) => p.name).join(", ")}`,
-        },
-        {
-          ts: new Date().toISOString(),
-          title: "Длительность гибридизации: 2 дня (48 часов)",
-        },
-      ]
-    );
+    const { eventId } = createHybridizationEvent({
+      batchName,
+      preparationIds: ids,
+      probes,
+      operator: "Лаборант",
+      startDate: `${date}T10:00:00`,
+      endDate: `${date}T10:00:00`,
+    });
     toast.success("Ивент сохранён");
-    nav(`/журнал/ивент/${id}`);
+    nav(`/журнал/ивент/${eventId}`);
   }
 
   return (
@@ -231,7 +211,7 @@ export default function HybridizationForm({ defaultDate }: Props) {
       <Card>
         <SectionTitle
           title="Зонды и каналы"
-          hint="Выберите зонды по одному, отмечая канал: красный, зелёный или синий."
+          hint="Зонды берутся из справочника атласа; канал подтягивается из флюорохрома, DAPI добавляется автоматически."
         />
         <div className="mt-4">
           <ProbeSelector value={probes} onChange={setProbes} />

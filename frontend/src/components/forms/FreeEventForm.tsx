@@ -15,7 +15,7 @@ interface Props {
 
 export default function FreeEventForm({ defaultDate }: Props) {
   const nav = useNavigate();
-  const addEvent = useStore((s) => s.addEvent);
+  const createFreeEvent = useStore((s) => s.createFreeEvent);
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(
@@ -41,26 +41,16 @@ export default function FreeEventForm({ defaultDate }: Props) {
       toast.error("Введите название ивента");
       return;
     }
-    const id = `EV-FR-${Date.now()}`;
-    addEvent(
-      {
-        id,
-        type: "free",
-        title: title.trim(),
-        startDate: `${date}T${time}:00`,
-        operator: "Лаборант",
-        status: "completed",
-        comment: note,
-        attachmentName: file ?? undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        createdAt: new Date().toISOString(),
-      },
-      [
-        { ts: new Date().toISOString(), title: "Создан свободный ивент" },
-      ]
-    );
+    const { eventId } = createFreeEvent({
+      title: title.trim(),
+      startDate: `${date}T${time}:00`,
+      operator: "Лаборант",
+      comment: note,
+      attachmentName: file ?? undefined,
+      tags: tags.length > 0 ? tags : undefined,
+    });
     toast.success("Ивент сохранён");
-    nav(`/журнал/ивент/${id}`);
+    nav(`/журнал/ивент/${eventId}`);
   }
 
   return (
@@ -159,14 +149,16 @@ export default function FreeEventForm({ defaultDate }: Props) {
 
         <button
           type="button"
-          onClick={() => setFile(file ? null : "report.pdf")}
+          onClick={() => setFile(file ? null : "вложение.pdf")}
           className="mt-5 block w-full rounded-2xl border-2 border-dashed border-brand-accent/60 bg-brand-mint/40 px-5 py-8 text-center transition hover:bg-brand-mint"
         >
           <UploadCloud size={28} className="mx-auto text-brand-dark" />
           <div className="mt-2 text-sm font-semibold text-brand-deep">
             {file ? `Файл: ${file}` : "Прикрепить файл"}
           </div>
-          <div className="text-[11.5px] text-brand-muted">PDF, JPEG до 10 МБ</div>
+          <div className="text-[11.5px] text-brand-muted">
+            Документ или изображение до 10 МБ
+          </div>
         </button>
 
         <div className="mt-4 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-mint/40 px-3 py-2.5 text-[12.5px] text-brand-deep">

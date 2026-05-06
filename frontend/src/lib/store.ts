@@ -2,11 +2,15 @@ import { create } from "zustand";
 import {
   DEMO_PSD_FILE_1730,
   DEMO_PSD_LAYERS_1730,
+  initialAnomalyTypes,
+  initialAtlasProbes,
+  initialChromosomeClasses,
   initialChromosomeLayers,
   initialChromosomes,
   initialEvents,
   initialExportJobs,
   initialExportTemplates,
+  initialFluorochromes,
   initialGenomeLayouts,
   initialIdeograms,
   initialKaryotypeImports,
@@ -17,20 +21,33 @@ import {
   initialProbes,
   initialSampleKaryotypes,
   initialSamples,
+  initialSpecies,
   initialStained,
+  initialSubgenomes,
+  initialTheoreticalRecords,
   initialTilts,
 } from "./mockData";
 import type {
+  AnomalyType,
+  AnomalyTypeMeta,
+  AtlasContext,
+  AtlasFilters,
+  AtlasProbe,
   ChangeRecord,
+  ChromosomeClassDef,
   ChromosomeLayer,
   ChromosomeObject,
+  ChromosomeSnapshot,
   ChromosomeStatus,
   ExportJob,
   ExportSettings,
   ExportTemplate,
   ExportTemplateType,
+  Fluorochrome,
+  FreeEvent,
   GenomeAnomaly,
   GenomeLayout,
+  HybridizationEvent,
   Ideogram,
   IdeogramAnomaly,
   IdeogramSignal,
@@ -40,13 +57,23 @@ import type {
   KaryotypeLevel,
   Metaphase,
   Note,
+  PhotographingEvent,
   Plant,
   Preparation,
+  PreparationSource,
   Probe,
+  ProbeChannel,
+  Quality,
   Sample,
   SampleKaryotype,
+  SlideEvent,
+  SpeciesDef,
+  StainFate,
   StainedPreparation,
+  SubgenomeDef,
+  TheoreticalRecord,
   TiltEntry,
+  WashEvent,
 } from "./types";
 import { isoDay } from "./utils";
 import { nextChildId } from "./naming";
@@ -89,6 +116,16 @@ interface State {
 
   karyoCtx: KaryotypeContext;
 
+  // ----- атлас -----
+  fluorochromes: Fluorochrome[];
+  atlasProbes: AtlasProbe[];
+  subgenomes: SubgenomeDef[];
+  species: SpeciesDef[];
+  chromosomeClasses: ChromosomeClassDef[];
+  anomalyTypes: AnomalyTypeMeta[];
+  theoreticalRecords: TheoreticalRecord[];
+  atlasCtx: AtlasContext;
+
   setSelectedDate: (d: string) => void;
 
   addSample: (s: Sample) => void;
@@ -96,17 +133,99 @@ interface State {
   /** Частичное обновление существующего ивента по id. */
   updateEvent: (id: string, patch: Partial<JournalEvent>) => void;
 
+  /**
+   * Доменные действия — инкапсулируют изменения связанных коллекций
+   * (`samples`, `preparations`, `stained`) внутри одного перехода.
+   * Формы вызывают их вместо ручной правки массивов.
+   */
+  createSlideEvent: (input: {
+    sampleId: string;
+    source: PreparationSource;
+    quality: Quality;
+    storageJar?: string;
+    storageFridge?: string;
+    /** Сколько препаратов создаём за один ивент. */
+    count: number;
+    operator?: string;
+    comment?: string;
+    startDate?: string;
+  }) => { eventId: string; preparationIds: string[] };
+
+  createWashEvent: (input: {
+    preparationIds: string[];
+    /** `pre` — первичная отмывка, `post` — постгибридизационная (=> `rehyb_ready`). */
+    kind: "pre" | "post";
+    newFridge?: string;
+    newBox?: string;
+    protocolNotes?: string;
+    operator?: string;
+    comment?: string;
+    startDate?: string;
+  }) => { eventId: string };
+
+  createHybridizationEvent: (input: {
+    batchName: string;
+    preparationIds: string[];
+    probes: { name: string; channel: ProbeChannel }[];
+    operator?: string;
+    comment?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => { eventId: string; stainedIds: string[] };
+
+  createPhotographingEvent: (input: {
+    decisions: {
+      stainedId: string;
+      fate: StainFate;
+      newFridge?: string;
+      newBox?: string;
+    }[];
+    operator?: string;
+    comment?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => { eventId: string };
+
+  createFreeEvent: (input: {
+    title: string;
+    operator?: string;
+    comment?: string;
+    tags?: string[];
+    attachmentName?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => { eventId: string };
+
+  /**
+   * Изменить судьбу окрашенного препарата без создания нового ивента
+   * (например, перевести «решу позже» в «переотмыт» или «выбросить»).
+   */
+  setStainedFate: (
+    stainedId: string,
+    fate: StainFate,
+    options?: { newFridge?: string; newBox?: string }
+  ) => void;
+
   addNote: (note: Omit<Note, "id" | "createdAt" | "archived">) => Note;
   archiveNote: (id: string) => void;
   unarchiveNote: (id: string) => void;
   togglePinNote: (id: string) => void;
 
-  incrementTilt: (level?: TiltEntry["level"]) => void;
+  incrementTilt: () => void;
 
   setLastChange: (change?: ChangeRecord[]) => void;
 
   // ----- кариотип actions -----
   selectKaryotypeContext: (ctx: Partial<KaryotypeContext>) => void;
+  /**
+   * Создаёт новый mock-импорт PSD для выбранного образца/окрашенного препарата.
+   * Если уже есть открытый (не committed) импорт под эту окраску — возвращает его id.
+   */
+  createKaryotypeImport: (input: {
+    sampleId: string;
+    stainedId: string;
+    fileName?: string;
+  }) => string;
   /** Симулирует чтение PSD: создаёт preview слоёв и переводит import в `preview`. */
   mockReadPsd: (importId: string, fileName?: string) => void;
   toggleImportLayer: (layerId: string) => void;
@@ -164,6 +283,52 @@ interface State {
       fileLabel?: string;
     }
   ) => string;
+
+  // ----- атлас actions -----
+  setAtlasContext: (patch: Partial<AtlasContext>) => void;
+  setAtlasFilters: (patch: Partial<AtlasFilters>) => void;
+  resetAtlasFilters: () => void;
+  toggleAtlasSample: (id: string) => void;
+  toggleAtlasReference: (karyotypeId: string) => void;
+  toggleAtlasTheoretical: (id: string) => void;
+  toggleAtlasPanelProbe: (id: string) => void;
+
+  addFluorochrome: (f: Omit<Fluorochrome, "id">) => string;
+  updateFluorochrome: (id: string, patch: Partial<Fluorochrome>) => void;
+  deleteFluorochrome: (id: string) => void;
+
+  addAtlasProbe: (p: Omit<AtlasProbe, "id">) => string;
+  updateAtlasProbe: (id: string, patch: Partial<AtlasProbe>) => void;
+  deleteAtlasProbe: (id: string) => void;
+
+  addSubgenome: (s: Omit<SubgenomeDef, "id">) => string;
+  updateSubgenome: (id: string, patch: Partial<SubgenomeDef>) => void;
+  deleteSubgenome: (id: string) => void;
+
+  addSpecies: (s: Omit<SpeciesDef, "id">) => string;
+  updateSpecies: (id: string, patch: Partial<SpeciesDef>) => void;
+  deleteSpecies: (id: string) => void;
+
+  addChromosomeClassDef: (c: Omit<ChromosomeClassDef, "id">) => string;
+  updateChromosomeClassDef: (id: string, patch: Partial<ChromosomeClassDef>) => void;
+  deleteChromosomeClassDef: (id: string) => void;
+
+  addAnomalyType: (a: AnomalyTypeMeta) => void;
+  updateAnomalyType: (code: AnomalyType, patch: Partial<AnomalyTypeMeta>) => void;
+
+  addTheoreticalRecord: (r: Omit<TheoreticalRecord, "id" | "createdAt">) => string;
+  updateTheoreticalRecord: (id: string, patch: Partial<TheoreticalRecord>) => void;
+  deleteTheoreticalRecord: (id: string) => void;
+
+  toggleSampleKaryotypeReference: (
+    karyotypeId: string,
+    refMeta?: {
+      label?: string;
+      scope?: NonNullable<SampleKaryotype["referenceScope"]>;
+      source?: NonNullable<SampleKaryotype["referenceSource"]>;
+      notes?: string;
+    }
+  ) => void;
 }
 
 /* ----- helpers ----- */
@@ -177,6 +342,30 @@ function genId(prefix: string) {
 function defaultKaryotypeCtx(): KaryotypeContext {
   return {
     level: "metaphase",
+  };
+}
+
+function defaultAtlasCtx(): AtlasContext {
+  return {
+    viewMode: "chromosomes_with_ideograms",
+    alignByCentromere: true,
+    showProbeLabels: false,
+    showAnomalyLabels: true,
+    selectedSampleIds: [],
+    selectedReferenceIds: [],
+    selectedTheoreticalIds: [],
+    selectedPanelProbeIds: [],
+    probeSelectionMode: "single",
+    filters: {
+      speciesIds: [],
+      subgenomes: [],
+      classIds: [],
+      anomalyCodes: [],
+      source: "all",
+      karyotypeStatuses: [],
+    },
+    scale: "sample",
+    compareLayout: "two_side",
   };
 }
 
@@ -231,6 +420,16 @@ export const useStore = create<State>((set, get) => ({
   exportJobs: initialExportJobs,
   karyoCtx: defaultKaryotypeCtx(),
 
+  // ----- атлас -----
+  fluorochromes: initialFluorochromes,
+  atlasProbes: initialAtlasProbes,
+  subgenomes: initialSubgenomes,
+  species: initialSpecies,
+  chromosomeClasses: initialChromosomeClasses,
+  anomalyTypes: initialAnomalyTypes,
+  theoreticalRecords: initialTheoreticalRecords,
+  atlasCtx: defaultAtlasCtx(),
+
   setSelectedDate: (d) => set({ selectedDate: d }),
 
   addSample: (s) => set((st) => ({ samples: [s, ...st.samples] })),
@@ -281,15 +480,364 @@ export const useStore = create<State>((set, get) => ({
       ),
     })),
 
-  incrementTilt: (level = "calm") => {
+  incrementTilt: () => {
     const today = isoDay(new Date());
     const t: TiltEntry = {
       id: `T-${Date.now()}`,
       date: today,
-      level,
     };
     set((st) => ({ tilts: [t, ...st.tilts] }));
   },
+
+  /* ====================== ДОМЕННЫЕ ИВЕНТЫ ====================== */
+
+  createSlideEvent: ({
+    sampleId,
+    source,
+    quality,
+    storageJar,
+    storageFridge,
+    count,
+    operator,
+    comment,
+    startDate,
+  }) => {
+    const ts = startDate ?? nowIso();
+    const st = get();
+    const sample = st.samples.find((s) => s.id === sampleId);
+    const sourceKey =
+      source.kind === "plant" ? source.plantId : `${sampleId}.0`;
+    const existingForSource = st.preparations.filter((p) =>
+      p.id.startsWith(`${sourceKey}.`)
+    );
+    const startNumber = existingForSource.length + 1;
+    const preparationIds: string[] = [];
+    const newPreparations: Preparation[] = [];
+    for (let i = 0; i < count; i++) {
+      const id = `${sourceKey}.${startNumber + i}`;
+      preparationIds.push(id);
+      newPreparations.push({
+        id,
+        sampleId,
+        source,
+        createdAt: ts,
+        quality,
+        status: "created",
+        fridge: storageFridge,
+        box: storageJar,
+        stainCycle: 0,
+      });
+    }
+    const eventId = `EV-SLIDE-${Date.now().toString(36)}`;
+    const ev: SlideEvent = {
+      id: eventId,
+      type: "slide",
+      title: `Создание препарата · ${count} шт.`,
+      sampleId,
+      source,
+      quality,
+      storageJar,
+      storageFridge,
+      preparationIds,
+      startDate: ts,
+      operator,
+      comment,
+      status: "completed",
+      createdAt: ts,
+    };
+    set((st2) => ({
+      events: [ev, ...st2.events],
+      preparations: [...newPreparations, ...st2.preparations],
+      samples:
+        sample && sample.status !== "in_work" && sample.status !== "result"
+          ? st2.samples.map((s) =>
+              s.id === sampleId ? { ...s, status: "in_work" } : s
+            )
+          : st2.samples,
+      lastChange: [
+        {
+          ts,
+          title: `Создан препарат · ${count} шт.`,
+          detail: `Образец S-${sampleId}`,
+          href: `/журнал/ивент/${eventId}`,
+        },
+      ],
+    }));
+    return { eventId, preparationIds };
+  },
+
+  createWashEvent: ({
+    preparationIds,
+    kind,
+    newFridge,
+    newBox,
+    protocolNotes,
+    operator,
+    comment,
+    startDate,
+  }) => {
+    const ts = startDate ?? nowIso();
+    const eventId = `EV-WASH-${Date.now().toString(36)}`;
+    const ev: WashEvent = {
+      id: eventId,
+      type: "wash",
+      title:
+        kind === "pre"
+          ? `Предгибридизационная отмывка · ${preparationIds.length} шт.`
+          : `Постгибридизационная отмывка · ${preparationIds.length} шт.`,
+      preparationIds,
+      newFridge,
+      newBox,
+      protocolNotes,
+      startDate: ts,
+      operator,
+      comment,
+      status: "completed",
+      createdAt: ts,
+    };
+    set((st) => ({
+      events: [ev, ...st.events],
+      preparations: st.preparations.map((p) =>
+        preparationIds.includes(p.id)
+          ? {
+              ...p,
+              status: kind === "pre" ? "pre_washed" : "rehyb_ready",
+              fridge: newFridge ?? p.fridge,
+              box: newBox ?? p.box,
+            }
+          : p
+      ),
+      lastChange: [
+        {
+          ts,
+          title:
+            kind === "pre"
+              ? `Препараты отмыты (первично)`
+              : `Препараты переотмыты`,
+          detail: `${preparationIds.length} шт.`,
+          href: `/журнал/ивент/${eventId}`,
+        },
+      ],
+    }));
+    return { eventId };
+  },
+
+  createHybridizationEvent: ({
+    batchName,
+    preparationIds,
+    probes,
+    operator,
+    comment,
+    startDate,
+    endDate,
+  }) => {
+    const ts = startDate ?? nowIso();
+    const eventId = `EV-HYB-${Date.now().toString(36)}`;
+    const stainedIds: string[] = [];
+    const newStained: StainedPreparation[] = [];
+    const st = get();
+    for (const prepId of preparationIds) {
+      const prep = st.preparations.find((p) => p.id === prepId);
+      const cycle = (prep?.stainCycle ?? 0) + 1;
+      const stainedId = `${prepId}.${cycle}`;
+      stainedIds.push(stainedId);
+      newStained.push({
+        id: stainedId,
+        preparationId: prepId,
+        cycleNumber: cycle,
+        probes,
+        hybridizationDate: ts,
+        status: "created",
+      });
+    }
+    const ev: HybridizationEvent = {
+      id: eventId,
+      type: "hybridization",
+      title: `Гибридизация · ${batchName}`,
+      batchName,
+      preparationIds,
+      probes,
+      startDate: ts,
+      endDate,
+      operator,
+      comment,
+      status: "active",
+      createdAt: ts,
+    };
+    set((st2) => ({
+      events: [ev, ...st2.events],
+      stained: [...newStained, ...st2.stained],
+      preparations: st2.preparations.map((p) =>
+        preparationIds.includes(p.id)
+          ? { ...p, status: "hybridized" }
+          : p
+      ),
+      lastChange: [
+        {
+          ts,
+          title: `Гибридизация запущена`,
+          detail: `${preparationIds.length} препарат(ов), зонды: ${probes
+            .map((pr) => pr.name)
+            .join(" + ")}`,
+          href: `/журнал/ивент/${eventId}`,
+        },
+      ],
+    }));
+    return { eventId, stainedIds };
+  },
+
+  createPhotographingEvent: ({
+    decisions,
+    operator,
+    comment,
+    startDate,
+    endDate,
+  }) => {
+    const ts = startDate ?? nowIso();
+    const eventId = `EV-PHOTO-${Date.now().toString(36)}`;
+    const ev: PhotographingEvent = {
+      id: eventId,
+      type: "photographing",
+      title: `Фотографирование · ${decisions.length} окрасок`,
+      stainedDecisions: decisions,
+      startDate: ts,
+      endDate,
+      operator,
+      comment,
+      status: "completed",
+      createdAt: ts,
+    };
+    const st = get();
+    const stainedById = new Map(st.stained.map((s) => [s.id, s]));
+    const updatedStained: StainedPreparation[] = st.stained.map((s) => {
+      const dec = decisions.find((d) => d.stainedId === s.id);
+      if (!dec) return s;
+      const status: StainedPreparation["status"] =
+        dec.fate === "washed"
+          ? "closed_wash"
+          : dec.fate === "discarded"
+            ? "closed_discard"
+            : "photographed_undecided";
+      return { ...s, status, fate: dec.fate };
+    });
+    const updatedPreparations = st.preparations.map((p) => {
+      const dec = decisions.find((d) => stainedById.get(d.stainedId)?.preparationId === p.id);
+      if (!dec) return p;
+      const cycleAfter = (p.stainCycle ?? 0) + 1;
+      if (dec.fate === "washed") {
+        return {
+          ...p,
+          status: "rehyb_ready" as const,
+          stainCycle: cycleAfter,
+          fridge: dec.newFridge ?? p.fridge,
+          box: dec.newBox ?? p.box,
+        };
+      }
+      if (dec.fate === "discarded") {
+        return {
+          ...p,
+          status: "discarded" as const,
+          stainCycle: cycleAfter,
+        };
+      }
+      return {
+        ...p,
+        status: "photographed_undecided" as const,
+        fridge: dec.newFridge ?? p.fridge,
+        box: dec.newBox ?? p.box,
+      };
+    });
+    set((st2) => ({
+      events: [ev, ...st2.events],
+      stained: updatedStained,
+      preparations: updatedPreparations,
+      lastChange: [
+        {
+          ts,
+          title: `Фотографирование сохранено`,
+          detail: `${decisions.length} окрасок`,
+          href: `/журнал/ивент/${eventId}`,
+        },
+      ],
+    }));
+    return { eventId };
+  },
+
+  createFreeEvent: ({
+    title,
+    operator,
+    comment,
+    tags,
+    attachmentName,
+    startDate,
+    endDate,
+  }) => {
+    const ts = startDate ?? nowIso();
+    const eventId = `EV-FREE-${Date.now().toString(36)}`;
+    const ev: FreeEvent = {
+      id: eventId,
+      type: "free",
+      title,
+      attachmentName,
+      tags,
+      startDate: ts,
+      endDate,
+      operator,
+      comment,
+      status: "completed",
+      createdAt: ts,
+    };
+    set((st) => ({
+      events: [ev, ...st.events],
+      lastChange: [
+        {
+          ts,
+          title,
+          href: `/журнал/ивент/${eventId}`,
+        },
+      ],
+    }));
+    return { eventId };
+  },
+
+  setStainedFate: (stainedId, fate, options) =>
+    set((st) => {
+      const stained = st.stained.find((s) => s.id === stainedId);
+      if (!stained) return st;
+      const status =
+        fate === "washed"
+          ? "closed_wash"
+          : fate === "discarded"
+            ? "closed_discard"
+            : "photographed_undecided";
+      const cycleAfter = (() => {
+        const prep = st.preparations.find(
+          (p) => p.id === stained.preparationId
+        );
+        return (prep?.stainCycle ?? 0) + (fate === "undecided" ? 0 : 1);
+      })();
+      return {
+        stained: st.stained.map((s) =>
+          s.id === stainedId ? { ...s, status, fate } : s
+        ),
+        preparations: st.preparations.map((p) => {
+          if (p.id !== stained.preparationId) return p;
+          if (fate === "washed") {
+            return {
+              ...p,
+              status: "rehyb_ready",
+              stainCycle: cycleAfter,
+              fridge: options?.newFridge ?? p.fridge,
+              box: options?.newBox ?? p.box,
+            };
+          }
+          if (fate === "discarded") {
+            return { ...p, status: "discarded", stainCycle: cycleAfter };
+          }
+          return { ...p, status: "photographed_undecided" };
+        }),
+      };
+    }),
 
   setLastChange: (change) => set({ lastChange: change }),
 
@@ -297,6 +845,61 @@ export const useStore = create<State>((set, get) => ({
 
   selectKaryotypeContext: (ctx) =>
     set((st) => ({ karyoCtx: { ...st.karyoCtx, ...ctx } })),
+
+  createKaryotypeImport: ({ sampleId, stainedId, fileName }) => {
+    const st = get();
+    const stained = st.stained.find((s) => s.id === stainedId);
+    const existing = st.karyotypeImports.find(
+      (i) =>
+        i.sampleId === sampleId &&
+        i.stainedId === stainedId &&
+        i.status !== "committed"
+    );
+    if (existing) return existing.id;
+
+    const ts = nowIso();
+    const id = `KIM-${Date.now().toString(36).toUpperCase()}`;
+    const probes = stained?.probes.map((p) => p.name) ?? [];
+    const psdFileName =
+      fileName ??
+      `${sampleId}-${probes.join("+") || "psd"}-${id}.psd`;
+
+    const imp: KaryotypeImport = {
+      id,
+      sampleId,
+      preparationId: stained?.preparationId,
+      stainedId,
+      psdFileName,
+      parsedSampleId: sampleId,
+      parsedProbes: probes,
+      parsedPhotoNumber: undefined,
+      parsedCoordinates: undefined,
+      layerIds: [],
+      status: "empty",
+      warnings: [],
+      history: [
+        {
+          id: `h-${Date.now()}`,
+          ts,
+          label: "Импорт открыт",
+          detail: `Активный выбор: S-${sampleId} · ${stainedId}`,
+          level: "info",
+        },
+      ],
+      createdAt: ts,
+    };
+    set((st2) => ({
+      karyotypeImports: [...st2.karyotypeImports, imp],
+      karyoCtx: {
+        ...st2.karyoCtx,
+        sampleId,
+        stainedId,
+        preparationId: stained?.preparationId,
+        importId: id,
+      },
+    }));
+    return id;
+  },
 
   mockReadPsd: (importId, _fileName) =>
     set((st) => {
@@ -880,18 +1483,40 @@ export const useStore = create<State>((set, get) => ({
     const st = get();
     const layout = st.genomeLayouts.find((l) => l.id === layoutId);
     if (!layout) return undefined;
-    const id = `SK-${Date.now().toString(36)}`;
+    // Канонический id `<sample>.kar.<n>`.
+    const existing = st.sampleKaryotypes.filter(
+      (k) => k.sampleId === layout.sampleId && (k.kind ?? "sample") === "sample"
+    );
+    const id = `${layout.sampleId}.kar.${existing.length + 1}`;
     const ts = nowIso();
+    const selectedIds = layout.assignments.map((a) => a.chromosomeId);
+    const snapshot: ChromosomeSnapshot[] = st.chromosomes
+      .filter((c) => selectedIds.includes(c.id))
+      .map((c) => ({
+        chromosomeId: c.id,
+        metaphaseId: c.metaphaseId,
+        stainedId: c.stainedId,
+        displayName: c.displayName,
+        subgenome: c.subgenome,
+        chromosomeClass: c.chromosomeClass,
+        imageSeed: c.imageSeed,
+        maskSizePx: c.maskSizePx,
+        ideogramId: c.ideogramId,
+      }));
     const sk: SampleKaryotype = {
       id,
       sampleId: layout.sampleId,
       title:
         title ??
-        `Лицевой кариотип S-${layout.sampleId} · ${layout.level === "metaphase" ? "Метафаза" : "Гибридизация"}`,
-      status: "ready_for_review",
+        `Кариотип образца S-${layout.sampleId} · ${
+          layout.level === "metaphase" ? "Метафаза" : "Гибридизация"
+        }`,
+      status: "draft",
+      kind: "sample",
       layoutId,
       level: layout.level,
-      selectedChromosomeIds: layout.assignments.map((a) => a.chromosomeId),
+      selectedChromosomeIds: selectedIds,
+      snapshot,
       main: !st.sampleKaryotypes.some(
         (k) => k.sampleId === layout.sampleId && k.main
       ),
@@ -901,7 +1526,7 @@ export const useStore = create<State>((set, get) => ({
     set((st2) => ({
       sampleKaryotypes: [...st2.sampleKaryotypes, sk],
       genomeLayouts: st2.genomeLayouts.map((l) =>
-        l.id === layoutId ? { ...l, status: "ready_for_review" } : l
+        l.id === layoutId ? { ...l, status: "draft" } : l
       ),
     }));
     return id;
@@ -943,7 +1568,18 @@ export const useStore = create<State>((set, get) => ({
           : config.templateType === "free_table"
             ? "free_table"
             : "summary_table";
-    const ext = config.settings.format;
+    const ext = (() => {
+      switch (config.settings.format) {
+        case "tiff":
+          return "tiff";
+        case "excel":
+          return "xlsx";
+        case "text":
+          return "csv";
+        default:
+          return config.settings.format;
+      }
+    })();
     const job: ExportJob = {
       id,
       ...config,
@@ -970,6 +1606,184 @@ export const useStore = create<State>((set, get) => ({
     }));
     return id;
   },
+
+  /* ============================ АТЛАС ============================ */
+
+  setAtlasContext: (patch) =>
+    set((st) => ({ atlasCtx: { ...st.atlasCtx, ...patch } })),
+
+  setAtlasFilters: (patch) =>
+    set((st) => ({
+      atlasCtx: {
+        ...st.atlasCtx,
+        filters: { ...st.atlasCtx.filters, ...patch },
+      },
+    })),
+
+  resetAtlasFilters: () =>
+    set((st) => ({
+      atlasCtx: { ...st.atlasCtx, filters: defaultAtlasCtx().filters },
+    })),
+
+  toggleAtlasSample: (id) =>
+    set((st) => ({
+      atlasCtx: {
+        ...st.atlasCtx,
+        selectedSampleIds: st.atlasCtx.selectedSampleIds.includes(id)
+          ? st.atlasCtx.selectedSampleIds.filter((x) => x !== id)
+          : [...st.atlasCtx.selectedSampleIds, id],
+      },
+    })),
+
+  toggleAtlasReference: (karyotypeId) =>
+    set((st) => ({
+      atlasCtx: {
+        ...st.atlasCtx,
+        selectedReferenceIds: st.atlasCtx.selectedReferenceIds.includes(karyotypeId)
+          ? st.atlasCtx.selectedReferenceIds.filter((x) => x !== karyotypeId)
+          : [...st.atlasCtx.selectedReferenceIds, karyotypeId],
+      },
+    })),
+
+  toggleAtlasTheoretical: (id) =>
+    set((st) => ({
+      atlasCtx: {
+        ...st.atlasCtx,
+        selectedTheoreticalIds: st.atlasCtx.selectedTheoreticalIds.includes(id)
+          ? st.atlasCtx.selectedTheoreticalIds.filter((x) => x !== id)
+          : [...st.atlasCtx.selectedTheoreticalIds, id],
+      },
+    })),
+
+  toggleAtlasPanelProbe: (id) =>
+    set((st) => ({
+      atlasCtx: {
+        ...st.atlasCtx,
+        selectedPanelProbeIds: st.atlasCtx.selectedPanelProbeIds.includes(id)
+          ? st.atlasCtx.selectedPanelProbeIds.filter((x) => x !== id)
+          : [...st.atlasCtx.selectedPanelProbeIds, id],
+      },
+    })),
+
+  addFluorochrome: (f) => {
+    const id = `FL-${Date.now().toString(36)}`;
+    set((st) => ({ fluorochromes: [...st.fluorochromes, { ...f, id }] }));
+    return id;
+  },
+  updateFluorochrome: (id, patch) =>
+    set((st) => ({
+      fluorochromes: st.fluorochromes.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    })),
+  deleteFluorochrome: (id) =>
+    set((st) => ({ fluorochromes: st.fluorochromes.filter((x) => x.id !== id) })),
+
+  addAtlasProbe: (p) => {
+    const id = `AP-${Date.now().toString(36)}`;
+    set((st) => ({ atlasProbes: [...st.atlasProbes, { ...p, id }] }));
+    return id;
+  },
+  updateAtlasProbe: (id, patch) =>
+    set((st) => ({
+      atlasProbes: st.atlasProbes.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    })),
+  deleteAtlasProbe: (id) =>
+    set((st) => ({ atlasProbes: st.atlasProbes.filter((x) => x.id !== id) })),
+
+  addSubgenome: (s) => {
+    const id = `SG-${Date.now().toString(36)}`;
+    set((st) => ({ subgenomes: [...st.subgenomes, { ...s, id }] }));
+    return id;
+  },
+  updateSubgenome: (id, patch) =>
+    set((st) => ({
+      subgenomes: st.subgenomes.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    })),
+  deleteSubgenome: (id) =>
+    set((st) => ({ subgenomes: st.subgenomes.filter((x) => x.id !== id) })),
+
+  addSpecies: (s) => {
+    const id = `SP-${Date.now().toString(36)}`;
+    set((st) => ({ species: [...st.species, { ...s, id }] }));
+    return id;
+  },
+  updateSpecies: (id, patch) =>
+    set((st) => ({
+      species: st.species.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+    })),
+  deleteSpecies: (id) =>
+    set((st) => ({ species: st.species.filter((x) => x.id !== id) })),
+
+  addChromosomeClassDef: (c) => {
+    const id = `CC-${Date.now().toString(36)}`;
+    set((st) => ({
+      chromosomeClasses: [...st.chromosomeClasses, { ...c, id }],
+    }));
+    return id;
+  },
+  updateChromosomeClassDef: (id, patch) =>
+    set((st) => ({
+      chromosomeClasses: st.chromosomeClasses.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    })),
+  deleteChromosomeClassDef: (id) =>
+    set((st) => ({
+      chromosomeClasses: st.chromosomeClasses.filter((x) => x.id !== id),
+    })),
+
+  addAnomalyType: (a) =>
+    set((st) => ({ anomalyTypes: [...st.anomalyTypes, a] })),
+  updateAnomalyType: (code, patch) =>
+    set((st) => ({
+      anomalyTypes: st.anomalyTypes.map((x) =>
+        x.code === code ? { ...x, ...patch } : x
+      ),
+    })),
+
+  addTheoreticalRecord: (r) => {
+    const id = `TH-${Date.now().toString(36)}`;
+    set((st) => ({
+      theoreticalRecords: [
+        ...st.theoreticalRecords,
+        { ...r, id, createdAt: nowIso() },
+      ],
+    }));
+    return id;
+  },
+  updateTheoreticalRecord: (id, patch) =>
+    set((st) => ({
+      theoreticalRecords: st.theoreticalRecords.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    })),
+  deleteTheoreticalRecord: (id) =>
+    set((st) => ({
+      theoreticalRecords: st.theoreticalRecords.filter((x) => x.id !== id),
+    })),
+
+  toggleSampleKaryotypeReference: (karyotypeId, refMeta) =>
+    set((st) => ({
+      sampleKaryotypes: st.sampleKaryotypes.map((k) =>
+        k.id === karyotypeId
+          ? {
+              ...k,
+              isReference: !k.isReference,
+              referenceLabel: !k.isReference
+                ? (refMeta?.label ?? `Эталон S-${k.sampleId}`)
+                : k.referenceLabel,
+              referenceScope: refMeta?.scope ?? k.referenceScope,
+              referenceSource: refMeta?.source ?? k.referenceSource,
+              referenceNotes: refMeta?.notes ?? k.referenceNotes,
+            }
+          : k
+      ),
+    })),
 }));
 
 /* ============================================================ */
@@ -1006,39 +1820,58 @@ export function selectTiltCount(
   }).length;
 }
 
+/**
+ * Бакеты прогресса материала (`09_прогресс_и_поиск_висяков.md`).
+ *
+ * Пять колонок:
+ *  - `matured` — образцы, у которых растения готовы, но препарата ещё нет.
+ *  - `awaitingWash` — препараты в статусе `created` (ждут первичную отмывку).
+ *  - `washed` — препараты, готовые к гибридизации; делятся на
+ *      `primaryWashed` (первично отмыт) и `rehybReady` (переотмытые).
+ *  - `hybridized` — активная гибридизация без решения по фото.
+ *  - `result` — образцы с утверждённым кариотипом образца.
+ *
+ * Колонки «сфотографирован» в прогрессе нет: состояние «фото есть, судьба не
+ * решена» живёт в карточках и закрывается без отдельной колонки.
+ */
 export interface ProgressBuckets {
-  matureNoPrep: Sample[];
-  created: Preparation[];
-  primaryWashed: Preparation[];
-  postHybWashed: Preparation[];
+  matured: Sample[];
+  awaitingWash: Preparation[];
+  washed: {
+    all: Preparation[];
+    primaryWashed: Preparation[];
+    rehybReady: Preparation[];
+  };
   hybridized: Preparation[];
-  photographed: Preparation[];
   result: Sample[];
 }
 
 export function selectProgressBuckets(state: State): ProgressBuckets {
   const { samples, preparations } = state;
 
-  const matureNoPrep = samples.filter(
+  const matured = samples.filter(
     (s) =>
       (s.status === "registered" || s.status === "germinating") &&
       !preparations.some((p) => p.sampleId === s.id)
   );
 
-  const created = preparations.filter((p) => p.status === "created");
+  const awaitingWash = preparations.filter((p) => p.status === "created");
   const primaryWashed = preparations.filter((p) => p.status === "pre_washed");
-  const postHybWashed = preparations.filter((p) => p.status === "rehyb_ready");
-  const hybridized = preparations.filter((p) => p.status === "hybridized");
-  const photographed = preparations.filter((p) => p.status === "photographed");
+  const rehybReady = preparations.filter((p) => p.status === "rehyb_ready");
+  const hybridized = preparations.filter(
+    (p) => p.status === "hybridized" || p.status === "photographed_undecided"
+  );
   const result = samples.filter((s) => s.status === "result" || s.hasResult);
 
   return {
-    matureNoPrep,
-    created,
-    primaryWashed,
-    postHybWashed,
+    matured,
+    awaitingWash,
+    washed: {
+      all: [...primaryWashed, ...rehybReady],
+      primaryWashed,
+      rehybReady,
+    },
     hybridized,
-    photographed,
     result,
   };
 }
@@ -1122,6 +1955,93 @@ export function selectKaryotypesForSample(state: State, sampleId: string) {
   return state.sampleKaryotypes.filter((k) => k.sampleId === sampleId);
 }
 
+/**
+ * Только «кариотипы образца» (обзорные). Используется в карточке образца
+ * и в списке результатов для разделения с «кариотипами метафаз».
+ */
+export function selectSampleKaryotypesOnly(state: State, sampleId: string) {
+  return state.sampleKaryotypes.filter(
+    (k) => k.sampleId === sampleId && (k.kind ?? "sample") === "sample"
+  );
+}
+
+/**
+ * Только «кариотипы метафаз» — отдельный список в карточке образца.
+ */
+export function selectMetaphaseKaryotypesForSample(
+  state: State,
+  sampleId: string
+) {
+  return state.sampleKaryotypes.filter(
+    (k) => k.sampleId === sampleId && k.kind === "metaphase"
+  );
+}
+
+/** Список метафаз образца — для блока «Метафазы» в карточке образца. */
+export function selectMetaphasesForSample(state: State, sampleId: string) {
+  return state.metaphases.filter((m) => m.sampleId === sampleId);
+}
+
 export function selectExportsForSample(state: State, sampleId: string) {
   return state.exportJobs.filter((j) => j.sampleIds.includes(sampleId));
+}
+
+/* --- атлас selectors --- */
+
+export function selectReferenceKaryotypes(state: State): SampleKaryotype[] {
+  return state.sampleKaryotypes.filter((k) => k.isReference);
+}
+
+export function selectAtlasChromosomes(state: State): ChromosomeObject[] {
+  const ctx = state.atlasCtx;
+  const referenceSampleIds = state.sampleKaryotypes
+    .filter((k) => ctx.selectedReferenceIds.includes(k.id))
+    .map((k) => k.sampleId);
+  const sampleIds = new Set([
+    ...ctx.selectedSampleIds,
+    ...referenceSampleIds,
+  ]);
+  let result = state.chromosomes.filter((c) => sampleIds.has(c.sampleId));
+  if (ctx.filters.subgenomes.length > 0) {
+    result = result.filter(
+      (c) => c.subgenome && ctx.filters.subgenomes.includes(c.subgenome)
+    );
+  }
+  if (ctx.filters.classIds.length > 0) {
+    const labels = new Set(
+      state.chromosomeClasses
+        .filter((cls) => ctx.filters.classIds.includes(cls.id))
+        .map((cls) => cls.label)
+    );
+    result = result.filter(
+      (c) => c.displayName && labels.has(c.displayName)
+    );
+  }
+  return result;
+}
+
+export function selectProbeUsage(state: State, probeName: string) {
+  return state.stained.filter((s) =>
+    s.probes.some((p) => p.name === probeName)
+  );
+}
+
+export function selectSpeciesSamples(state: State, speciesId: string) {
+  const sp = state.species.find((s) => s.id === speciesId);
+  if (!sp) return [];
+  return state.samples.filter(
+    (s) => s.species === sp.latinName || s.species === sp.name
+  );
+}
+
+export function selectAtlasFiltersCount(state: State): number {
+  const f = state.atlasCtx.filters;
+  return (
+    f.speciesIds.length +
+    f.subgenomes.length +
+    f.classIds.length +
+    f.anomalyCodes.length +
+    f.karyotypeStatuses.length +
+    (f.source === "all" ? 0 : 1)
+  );
 }

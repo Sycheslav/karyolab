@@ -15,7 +15,8 @@ export type SampleStatus =
   | "registered" // зарегистрирован
   | "germinating" // проращивается
   | "in_work" // в работе
-  | "result"; // есть результат
+  | "result" // есть результат
+  | "archived"; // архивный
 
 /**
  * Статусы препарата (физического стекла) — 03_статусы_и_жизненные_циклы.md.
@@ -23,7 +24,8 @@ export type SampleStatus =
  * `created` — создан
  * `pre_washed` — предгибридизационно отмыт
  * `hybridized` — гибридизован (есть активная окраска)
- * `photographed` — текущая окраска сфотографирована
+ * `photographed` — текущая окраска сфотографирована, судьба решена
+ * `photographed_undecided` — сфотографирован, судьба не решена («решу позже»)
  * `rehyb_ready` — постгибридизационно отмыт, готов к повторной гибридизации
  * `discarded` — выброшен
  */
@@ -32,6 +34,7 @@ export type PreparationStatus =
   | "pre_washed"
   | "hybridized"
   | "photographed"
+  | "photographed_undecided"
   | "rehyb_ready"
   | "discarded";
 
@@ -39,11 +42,24 @@ export type PreparationStatus =
  * Цикл окраски — отдельный объект «окрашенный препарат».
  *
  * `created` — гибридизация запущена, фото нет
- * `photographed` — окраска сфотографирована
+ * `photographed` — окраска сфотографирована, судьба решена
+ * `photographed_undecided` — сфотографирована, оператор отложил решение
  * `closed_wash` — закрыт постгибридизационной отмывкой
  * `closed_discard` — закрыт выбрасыванием
  */
-export type StainStatus = "created" | "photographed" | "closed_wash" | "closed_discard";
+export type StainStatus =
+  | "created"
+  | "photographed"
+  | "photographed_undecided"
+  | "closed_wash"
+  | "closed_discard";
+
+/**
+ * Судьба окраски после фотографирования.
+ * `undecided` — оператор отложил решение, не создавая нового ивента;
+ * меняется потом из карточки препарата/окраски.
+ */
+export type StainFate = "washed" | "discarded" | "undecided";
 
 export type ProbeChannel = "red" | "green" | "blue";
 
@@ -123,7 +139,7 @@ export interface StainedPreparation {
   probes: { name: string; channel: ProbeChannel }[];
   hybridizationDate: string;
   status: StainStatus;
-  fate?: "washed" | "discarded";
+  fate?: StainFate;
 }
 
 export interface Probe {
@@ -185,7 +201,7 @@ export interface PhotographingEvent extends EventBase {
   type: "photographing";
   stainedDecisions: {
     stainedId: string;
-    fate: "washed" | "discarded";
+    fate: StainFate;
     newFridge?: string;
     newBox?: string;
   }[];
@@ -220,12 +236,18 @@ export interface Note {
   pinned?: boolean;
 }
 
+/**
+ * Уровни тильта оставлены для совместимости со старыми данными,
+ * но в новом UI не используются: тильт — одно действие, одна кнопка `+`.
+ * @deprecated будет удалено после полного перехода на одно-уровневый тильт.
+ */
 export type TiltLevel = "calm" | "mild" | "perfect" | "critical";
 
 export interface TiltEntry {
   id: string;
   date: string; // YYYY-MM-DD
-  level: TiltLevel;
+  /** @deprecated не используется в UI, оставлено для старых записей. */
+  level?: TiltLevel;
 }
 
 export interface ChangeRecord {
@@ -260,7 +282,11 @@ export type KaryotypeLevel = "metaphase" | "hybridization";
 
 export type SignalChannel = "red" | "green" | "blue";
 
-export type SignalKind = "point" | "large_point" | "block" | "segment";
+/**
+ * Четыре типа сигналов на идеограмме (`05_идеограммы_и_сигналы.md`).
+ * Хранятся в каналах `red` / `green`; синий (DAPI) идёт автоматически.
+ */
+export type SignalKind = "small_point" | "point" | "large_point" | "segment";
 
 export type AnomalyType =
   | "trisomy"
@@ -288,7 +314,16 @@ export type ExportTemplateType =
   | "free_table"
   | "summary_table";
 
-export type ExportFormat = "png" | "pdf";
+/**
+ * Форматы экспорта по `09_экспорт_и_шаблоны_обзоров.md`:
+ * - `tiff` — основной растровый формат для изображений кариотипа;
+ * - `excel` — табличные шаблоны (`.xlsx`);
+ * - `text` — текстовые шаблоны (`.csv` / `.txt`).
+ *
+ * `png` / `pdf` оставлены для обратной совместимости с уже существующими
+ * mock-задачами, но в новых сценариях не выбираются.
+ */
+export type ExportFormat = "tiff" | "excel" | "text" | "png" | "pdf";
 
 export type ChromosomeLayerKind =
   | "chromosome"
@@ -487,8 +522,26 @@ export interface GenomeLayout {
   updatedAt: string;
 }
 
+/**
+ * Снимок выбранной хромосомы внутри кариотипа образца.
+ * Хранит ссылку на канонический id и ключевые поля, которые нужны
+ * для устойчивости результата к правкам исходных метафаз
+ * (`08_лицевой_кариотип_образца.md`).
+ */
+export interface ChromosomeSnapshot {
+  chromosomeId: string;
+  metaphaseId: string;
+  stainedId: string;
+  displayName?: string;
+  subgenome?: string;
+  chromosomeClass?: number;
+  imageSeed: number;
+  maskSizePx: number;
+  ideogramId?: string;
+}
+
 export interface SampleKaryotype {
-  /** Канонический id обзорного кариотипа: `<sample>.kar.<n>` (например `1730.25.kar.1`). */
+  /** Канонический id кариотипа образца: `<sample>.kar.<n>` (например `1730.25.kar.1`). */
   id: string;
   /** «Читаемое» отображение для UI. */
   displayId?: string;
@@ -498,11 +551,27 @@ export interface SampleKaryotype {
   layoutId: string;
   level: KaryotypeLevel;
   selectedChromosomeIds: string[];
+  /**
+   * Снимок выбранных хромосом на момент сохранения кариотипа образца.
+   * Делает результат независимым от живых правок исходных хромосом.
+   */
+  snapshot?: ChromosomeSnapshot[];
   /** Метка «лицевой кариотип образца» — основной для образца. */
   main?: boolean;
+  /**
+   * Принадлежит ли кариотип «обзору образца» (несколько метафаз) или
+   * «кариотипу метафазы» (одна метафаза).
+   */
+  kind?: "sample" | "metaphase";
   createdAt: string;
   approvedAt?: string;
   exportIds: string[];
+  /** Помечен как эталонный кариотип (для атласа). */
+  isReference?: boolean;
+  referenceLabel?: string;
+  referenceScope?: "species" | "group" | "line" | "hypothesis";
+  referenceSource?: "lab" | "literature" | "external";
+  referenceNotes?: string;
 }
 
 export interface ExportTemplate {
@@ -531,4 +600,153 @@ export interface ExportJob {
   status: "ready" | "generating" | "done" | "error";
   fileName?: string;
   createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Атлас                                                               */
+/* ------------------------------------------------------------------ */
+
+export type FluorochromeChannel = ProbeChannel;
+
+export interface Fluorochrome {
+  id: string;
+  name: string;
+  channel: FluorochromeChannel;
+  description?: string;
+  isCounterstain?: boolean;
+}
+
+export interface AtlasProbe {
+  id: string;
+  name: string;
+  fluorochromeId: string;
+  target?: string;
+  manufacturer?: string;
+  notes?: string;
+}
+
+export interface SubgenomeDef {
+  id: string;
+  letter: string;
+  name: string;
+  description?: string;
+}
+
+export interface SpeciesTemplate {
+  id: string;
+  name: string;
+  subgenomes: string[];
+  classCount: number;
+}
+
+export interface SpeciesDef {
+  id: string;
+  name: string;
+  latinName?: string;
+  comment?: string;
+  /**
+   * Плоидность вида (`2n=42`, `2n=14` и т.д.).
+   * Используется для подсчёта готовности кариотипа и подсказок в матрице.
+   */
+  ploidy?: number;
+  /**
+   * Ожидаемое типовое число хромосом (для пшеницы мягкой — 42, не 21).
+   * Если не указано — берём `subgenomes.length * classCount * 2` из шаблона.
+   */
+  expectedChromosomeCount?: number;
+  templates: SpeciesTemplate[];
+}
+
+export type ChromosomeClassType =
+  | "standard"
+  | "translocation"
+  | "substitution"
+  | "foreign"
+  | "derivative";
+
+export interface ChromosomeClassDef {
+  id: string;
+  label: string;
+  subgenomeId: string;
+  classNumber: number;
+  type: ChromosomeClassType;
+  synonyms?: string[];
+  description?: string;
+}
+
+export type AnomalyLevel = "chromosome" | "metaphase" | "hybridization" | "sample";
+export type AnomalyMarkerShape = "tri" | "circle" | "square";
+
+export interface AnomalyTypeMeta {
+  code: AnomalyType;
+  label: string;
+  description: string;
+  defaultLevel: AnomalyLevel;
+  markerColor: string;
+  markerShape: AnomalyMarkerShape;
+  comment?: string;
+}
+
+export type TheoreticalSourceType = "literature" | "hypothesis" | "note" | "protocol";
+
+export interface TheoreticalRecord {
+  id: string;
+  title: string;
+  scope: { kind: "taxon" | "sample"; ref: string };
+  sourceType: TheoreticalSourceType;
+  source?: string;
+  description?: string;
+  relatedClassIds?: string[];
+  relatedProbeIds?: string[];
+  relatedAnomalyCodes?: AnomalyType[];
+  ideogramId?: string;
+  isReference?: boolean;
+  createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Контекст атласа                                                     */
+/* ------------------------------------------------------------------ */
+
+export type AtlasViewMode =
+  | "chromosomes"
+  | "chromosomes_with_ideograms"
+  | "ideograms_only";
+
+export type AtlasScale = "sample" | "metaphase" | "all" | "summary";
+
+export type AtlasSourceFilter = "all" | "lab" | "theoretical";
+
+export type AtlasCompareLayout =
+  | "two_side"
+  | "multi"
+  | "by_subgenome"
+  | "by_preparation"
+  | "by_probe"
+  | "by_class";
+
+export interface AtlasFilters {
+  speciesIds: string[];
+  subgenomes: string[];
+  classIds: string[];
+  anomalyCodes: AnomalyType[];
+  source: AtlasSourceFilter;
+  karyotypeStatuses: SampleKaryotypeStatus[];
+}
+
+export interface AtlasContext {
+  viewMode: AtlasViewMode;
+  alignByCentromere: boolean;
+  showProbeLabels: boolean;
+  showAnomalyLabels: boolean;
+  selectedSampleIds: string[];
+  selectedReferenceIds: string[];
+  selectedTheoreticalIds: string[];
+  selectedProbeId?: string;
+  selectedPanelProbeIds: string[];
+  probeSelectionMode: "single" | "panel";
+  filters: AtlasFilters;
+  scale: AtlasScale;
+  compareLayout: AtlasCompareLayout;
+  selectedCell?: { sub: string; cls: number };
 }

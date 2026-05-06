@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   addMonths,
@@ -58,18 +57,8 @@ export default function CalendarMonth({ className }: Props) {
   const selectedDate = useStore((s) => s.selectedDate);
   const setSelected = useStore((s) => s.setSelectedDate);
 
-  // По требованию заказчика «День» убран — оставлены только Месяц/Неделя.
   const [view, setView] = useState<"month" | "week">("month");
   const [anchor, setAnchor] = useState<Date>(() => parseISO(selectedDate));
-
-  // Поповер по «+N ещё» / по группе — рендерится через React portal,
-  // чтобы не перекрывать TopBar/Sidebar и не вылезать за границы ячеек.
-  const [popover, setPopover] = useState<{
-    items: JournalEvent[];
-    title: string;
-    x: number;
-    y: number;
-  } | null>(null);
 
   const days = useMemo(() => {
     if (view === "month") return buildMonthGrid(anchor);
@@ -166,52 +155,21 @@ export default function CalendarMonth({ className }: Props) {
     return groups;
   }
 
-  function openPopoverForCell(
-    e: React.MouseEvent,
-    items: JournalEvent[],
-    title: string
-  ) {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setPopover({
-      items,
-      title,
-      x: rect.left + window.scrollX,
-      y: rect.bottom + window.scrollY + 4,
-    });
-  }
-
-  function openPopoverForBar(e: React.MouseEvent, group: BarGroup) {
+  /**
+   * Клик по бару календаря.
+   * - одиночный ивент → карточка ивента;
+   * - стак (несколько ивентов одного типа в одном дне) → страница дня
+   *   с фильтром по этому типу (`/журнал/день/:date?type=...`).
+   *   Поповер не открываем — это требование документации.
+   */
+  function openBarTarget(group: BarGroup) {
     if (group.items.length === 1) {
-      // одиночный ивент — обычная навигация, поповер не нужен
       nav(`/журнал/ивент/${group.items[0].id}`);
       return;
     }
-    openPopoverForCell(
-      e,
-      group.items,
-      `${eventTypeLabel[group.type]} · ${group.items.length} ивентов`
-    );
+    const day = isoDay(group.items[0].startDate);
+    nav(`/журнал/день/${day}?type=${group.type}`);
   }
-
-  // Закрытие поповера по клику снаружи / ESC.
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!popover) return;
-    const onDoc = (ev: MouseEvent) => {
-      if (popoverRef.current && popoverRef.current.contains(ev.target as Node))
-        return;
-      setPopover(null);
-    };
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") setPopover(null);
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [popover]);
 
   return (
     <div className={classNames("card card-pad", className)}>
@@ -292,7 +250,12 @@ export default function CalendarMonth({ className }: Props) {
                   <button
                     key={d.toISOString()}
                     type="button"
-                    onClick={() => setSelected(isoDay(d))}
+                    onClick={() => {
+                      setSelected(isoDay(d));
+                      // Двойной щелчок/повторный клик по выбранному дню —
+                      // переход на страницу дня. Иначе — просто выбор.
+                      if (isSelected) nav(`/журнал/день/${isoDay(d)}`);
+                    }}
                     className={classNames(
                       // Фиксированная высота ячейки — календарь больше не «расползается»
                       // от ивентов (правка 1).
@@ -328,21 +291,20 @@ export default function CalendarMonth({ className }: Props) {
                       <Plus size={11} />
                     </span>
 
-                    {/* «+N ещё» при переполнении — поповер через portal (правка 1.2/1.3). */}
+                    {/*
+                      «+N ещё» — переход на страницу дня (без поповера).
+                      Календарь не открывает мини-список, а сразу ведёт в
+                      ленту ивентов выбранной даты (правка 1.2/1.3 + план).
+                    */}
                     {overflow > 0 && (
                       <span
                         role="button"
                         tabIndex={-1}
                         onClick={(e) => {
                           e.stopPropagation();
-                          const items = cellGroups.flatMap((g) => g.items);
-                          openPopoverForCell(
-                            e,
-                            items,
-                            `Ещё ${overflow} ивент(ов) на ${isoDay(d)}`
-                          );
+                          nav(`/журнал/день/${isoDay(d)}`);
                         }}
-                        title="Показать остальные ивенты дня"
+                        title="Открыть ленту дня"
                         className="absolute bottom-1 left-1 z-10 cursor-pointer rounded-full bg-brand-deep/85 px-1.5 py-0.5 text-[10px] font-semibold text-brand-cream"
                       >
                         +{overflow} ещё
@@ -380,7 +342,7 @@ export default function CalendarMonth({ className }: Props) {
                           label={label}
                           position={g.position}
                           showLabel={g.span >= 2 || g.position !== "middle"}
-                          onClick={(e) => openPopoverForBar(e, g)}
+                          onClick={() => openBarTarget(g)}
                         />
                       </div>
                     );
@@ -391,36 +353,6 @@ export default function CalendarMonth({ className }: Props) {
         })}
       </div>
 
-      {popover &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            style={{ position: "absolute", top: popover.y, left: popover.x }}
-            className="z-[1000] w-72 rounded-2xl border border-brand-line bg-white p-3 shadow-soft"
-          >
-            <div className="mb-2 text-[11.5px] font-bold uppercase tracking-wider text-brand-muted">
-              {popover.title}
-            </div>
-            <div className="max-h-72 space-y-1 overflow-y-auto">
-              {popover.items.map((ev) => (
-                <button
-                  key={ev.id}
-                  onClick={() => {
-                    setPopover(null);
-                    nav(`/журнал/ивент/${ev.id}`);
-                  }}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-brand-line bg-white px-2.5 py-1.5 text-left text-[12.5px] font-semibold text-brand-deep transition hover:bg-brand-mint/40"
-                >
-                  <span className="truncate">{ev.title}</span>
-                  <span className="shrink-0 rounded-full bg-brand-cream px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-dark">
-                    {eventTypeLabel[ev.type]}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>,
-          document.body
-        )}
     </div>
   );
 }

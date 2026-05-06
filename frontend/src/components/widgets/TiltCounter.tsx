@@ -9,6 +9,20 @@ export default function TiltCounter() {
   const lastYear = useStore((s) => selectTiltCount(s, "lastYear"));
   const inc = useStore((s) => s.incrementTilt);
 
+  // Соотношение «тильт / результат» (`08_заметки_и_тильт.md`):
+  // тильт за текущий год к числу образцов, у которых результат
+  // появился в этом году. Пока считаем по всем sample.hasResult.
+  const resultsThisYear = useStore((s) => {
+    const y = new Date().getFullYear();
+    return s.samples.filter(
+      (sm) =>
+        (sm.status === "result" || sm.hasResult) &&
+        new Date(sm.createdAt).getFullYear() <= y
+    ).length;
+  });
+  const ratio =
+    resultsThisYear > 0 ? (year / resultsThisYear).toFixed(1) : "—";
+
   return (
     <div className="rounded-2xl border border-brand-deep bg-brand-deep p-5 text-brand-cream shadow-card">
       <div className="flex items-start justify-between">
@@ -54,6 +68,13 @@ export default function TiltCounter() {
         <div className="flex items-center justify-between border-t border-white/10 pt-2">
           <span className="text-brand-cream/70">В прошлом году</span>
           <span className="font-bold text-white">{lastYear}</span>
+        </div>
+        <div
+          className="flex items-center justify-between border-t border-white/10 pt-2"
+          title="Тильт за год / результаты за год"
+        >
+          <span className="text-brand-cream/70">Тильт / результат</span>
+          <span className="font-bold text-white">{ratio}</span>
         </div>
       </div>
     </div>

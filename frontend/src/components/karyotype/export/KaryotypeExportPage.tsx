@@ -35,9 +35,23 @@ export default function KaryotypeExportPage() {
     alignByCentromere: true,
     showProbeLabels: true,
     showAnomalyLabels: true,
-    format: "png",
+    format: "tiff",
     quality: "publication",
   });
+
+  // Если тип шаблона требует таблицу — TIFF недоступен; выровняем формат.
+  const tplIsTable = useMemo(() => {
+    return exportTemplates.find((t) => t.id === templateId)?.type === "summary_table";
+  }, [templateId, exportTemplates]);
+  useEffect(() => {
+    setSettings((s) => {
+      if (tplIsTable && s.format === "tiff") return { ...s, format: "excel" };
+      if (!tplIsTable && (s.format === "excel" || s.format === "text")) {
+        return { ...s, format: "tiff" };
+      }
+      return s;
+    });
+  }, [tplIsTable]);
   const [lastJobId, setLastJobId] = useState<string | null>(null);
 
   // авто-выбор кариотипа при выборе образца
@@ -144,8 +158,8 @@ export default function KaryotypeExportPage() {
         <div>
           <h1 className="heading-page">Экспорт кариотипа</h1>
           <p className="mt-1 text-[13px] text-brand-muted">
-            Соберите обзорный кариотип, сравнение или сводную таблицу. Для
-            публикации выбирайте PDF и выравнивание по центромере.
+            Соберите обзорный кариотип, сравнение или сводную таблицу.
+            Для публикации используйте TIFF/Excel и выравнивание по центромере.
           </p>
         </div>
       </header>

@@ -67,6 +67,7 @@ export default function KaryotypeResultPicker({
                       {statusLabel(k.status)}
                     </Badge>
                     {k.main && <Badge tone="dark">основной</Badge>}
+                    {k.isReference && <Badge tone="mint">эталон</Badge>}
                     <span className="text-[11px] text-brand-muted">
                       {k.selectedChromosomeIds.length} хромосом
                     </span>

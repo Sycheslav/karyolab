@@ -10,6 +10,7 @@ import type {
 import {
   ArrowRight,
   CheckCircle2,
+  GitCompare,
   Save,
   Sparkles,
   AlertTriangle,
@@ -30,16 +31,9 @@ interface Props {
   onMakeKaryotype: () => void;
   onApprove: () => void;
   onGoExport: () => void;
+  onCompareToReference?: (karyotypeId: string) => void;
+  onToggleReference?: (karyotypeId: string) => void;
 }
-
-const ANOMALY_OPTIONS: { id: AnomalyType; label: string }[] = [
-  { id: "trisomy", label: "трисомия" },
-  { id: "monosomy", label: "моносомия" },
-  { id: "nullisomy", label: "нуллисомия" },
-  { id: "aneuploidy", label: "анеуплоидия" },
-  { id: "substitution", label: "замещение субгенома" },
-  { id: "translocation", label: "транслокация" },
-];
 
 export default function GenomeRightPanel({
   layout,
@@ -52,10 +46,25 @@ export default function GenomeRightPanel({
   onMakeKaryotype,
   onApprove,
   onGoExport,
+  onCompareToReference,
+  onToggleReference,
 }: Props) {
   const addAnomaly = useStore((s) => s.addGenomeAnomaly);
   const removeAnomaly = useStore((s) => s.removeGenomeAnomaly);
-  const [anomalyType, setAnomalyType] = useState<AnomalyType>("trisomy");
+  const anomalyTypes = useStore((s) => s.anomalyTypes);
+  const samples = useStore((s) => s.samples);
+  const speciesList = useStore((s) => s.species);
+  const sample = samples.find((s) => s.id === layout.sampleId);
+  const speciesDef = speciesList.find(
+    (sp) => sp.latinName === sample?.species || sp.name === sample?.species
+  );
+  const expectedTotal = speciesDef?.expectedChromosomeCount;
+  const genomeAnomalyOptions = anomalyTypes.filter(
+    (t) => t.defaultLevel === "metaphase" || t.defaultLevel === "sample"
+  );
+  const [anomalyType, setAnomalyType] = useState<AnomalyType>(
+    (genomeAnomalyOptions[0]?.code ?? "trisomy") as AnomalyType
+  );
   const [anomalyComment, setAnomalyComment] = useState("");
 
   // готовность к экспорту
@@ -130,12 +139,19 @@ export default function GenomeRightPanel({
               value={anomalyType}
               onChange={(e) => setAnomalyType(e.target.value as AnomalyType)}
             >
-              {ANOMALY_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>
+              {genomeAnomalyOptions.map((o) => (
+                <option key={o.code} value={o.code}>
                   {o.label}
                 </option>
               ))}
             </select>
+            <a
+              href="/атлас/аномалии"
+              className="text-[11px] font-semibold text-amber-800 underline-offset-2 hover:underline"
+              title="Открыть справочник аномалий"
+            >
+              справочник
+            </a>
             <button
               onClick={() => {
                 addAnomaly(layout.id, {
@@ -165,7 +181,7 @@ export default function GenomeRightPanel({
                 className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50/50 px-2 py-1.5"
               >
                 <span className="font-bold text-amber-900">
-                  {ANOMALY_OPTIONS.find((o) => o.id === a.type)?.label ?? a.type}
+                  {anomalyTypes.find((o) => o.code === a.type)?.label ?? a.type}
                 </span>
                 {a.subgenome && a.chromosomeClass && (
                   <span className="rounded bg-amber-200 px-1 text-[10px] font-bold text-amber-900">
@@ -201,8 +217,22 @@ export default function GenomeRightPanel({
           <ReadyRow label="Заполнено ячеек" value={`${filledCells} / ${totalCells}`} ok={incomplete === 0} />
           <ReadyRow
             label="Назначено хромосом"
-            value={String(layout.assignments.length)}
-            ok={layout.assignments.length > 0}
+            value={
+              expectedTotal
+                ? `${layout.assignments.length} / ${expectedTotal}`
+                : String(layout.assignments.length)
+            }
+            ok={
+              expectedTotal
+                ? layout.assignments.length === expectedTotal
+                : layout.assignments.length > 0
+            }
+            neutral={
+              expectedTotal
+                ? layout.assignments.length > 0 &&
+                  layout.assignments.length < expectedTotal
+                : undefined
+            }
           />
           <ReadyRow label="Аномалий" value={String(layout.anomalies.length)} ok neutral />
           <ReadyRow
@@ -230,6 +260,31 @@ export default function GenomeRightPanel({
                   Кариотип утверждён ·{" "}
                   <Badge tone="green">{existingKaryotype.id}</Badge>
                 </div>
+                <div className="flex items-center justify-between rounded-lg border border-brand-line bg-white px-3 py-2 text-[12px]">
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!existingKaryotype.isReference}
+                      onChange={() => onToggleReference?.(existingKaryotype.id)}
+                      className="h-4 w-4 accent-brand"
+                    />
+                    <span className="font-semibold text-brand-deep">
+                      Эталонный кариотип
+                    </span>
+                  </label>
+                  {existingKaryotype.isReference && (
+                    <span className="text-[11px] text-brand-muted">
+                      {existingKaryotype.referenceLabel ?? "—"}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => onCompareToReference?.(existingKaryotype.id)}
+                >
+                  <GitCompare size={14} />
+                  Сравнить с эталоном
+                </Button>
                 <Button onClick={onGoExport}>
                   <ArrowRight size={14} />
                   Перейти к экспорту

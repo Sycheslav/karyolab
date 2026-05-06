@@ -28,6 +28,7 @@ export default function KaryotypeImportPage() {
   const ctx = useStore((s) => s.karyoCtx);
 
   const selectKaryotypeContext = useStore((s) => s.selectKaryotypeContext);
+  const createKaryotypeImport = useStore((s) => s.createKaryotypeImport);
   const mockReadPsd = useStore((s) => s.mockReadPsd);
   const toggleImportLayer = useStore((s) => s.toggleImportLayer);
   const acknowledgeImportWarning = useStore((s) => s.acknowledgeImportWarning);
@@ -186,7 +187,7 @@ export default function KaryotypeImportPage() {
                 size="sm"
                 onClick={() =>
                   nav(
-                    `/кариотип/разметка-хромосом?sampleId=${activeImport.sampleId}&metaphaseId=${activeImport.metaphaseId}`
+                    `/кариотип/разметка?sampleId=${activeImport.sampleId}&metaphaseId=${activeImport.metaphaseId}`
                   )
                 }
               >
@@ -257,10 +258,33 @@ export default function KaryotypeImportPage() {
         />
       ) : !activeImport ? (
         <Card>
-          <p className="text-sm text-brand-muted">
-            Для этого образца ещё нет открытого импорта. Используйте drop-зону —
-            создание импорта произойдёт автоматически (mock).
-          </p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-brand-muted">
+              Для выбранной окраски ещё нет открытого импорта. Создайте новый —
+              появится drop-зона PSD и список слоёв.
+            </p>
+            <Button
+              variant="dark"
+              size="sm"
+              onClick={() => {
+                const id = createKaryotypeImport({
+                  sampleId: sampleId!,
+                  stainedId: stainedId!,
+                });
+                toast.success("Открыт новый импорт PSD");
+                setParams(
+                  (p) => {
+                    const np = new URLSearchParams(p);
+                    np.set("importId", id);
+                    return np;
+                  },
+                  { replace: true }
+                );
+              }}
+            >
+              Создать новый импорт
+            </Button>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[420px_1fr]">
@@ -292,7 +316,7 @@ export default function KaryotypeImportPage() {
               onCommit={handleCommit}
               onGoMarkup={() =>
                 nav(
-                  `/кариотип/разметка-хромосом?sampleId=${activeImport.sampleId}&metaphaseId=${activeImport.metaphaseId}`
+                  `/кариотип/разметка?sampleId=${activeImport.sampleId}&metaphaseId=${activeImport.metaphaseId}`
                 )
               }
             />

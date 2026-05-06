@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Plus, StickyNote } from "lucide-react";
+import { ChevronRight, Plus, StickyNote } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
 import { parseISO, startOfDay } from "date-fns";
@@ -35,8 +34,6 @@ export default function TodayEvents() {
   const notes = useStore((s) => s.notes);
   const selectedDate = useStore((s) => s.selectedDate);
   const nav = useNavigate();
-
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const dayItems = useMemo<DayItem[]>(() => {
     const d = startOfDay(parseISO(selectedDate));
@@ -135,14 +132,13 @@ export default function TodayEvents() {
             );
           }
 
-          // Группа ивентов одного типа: одна строка-агрегатор +
-          // раскрываемый список с переходами в каждую карточку.
+          // Группа ивентов одного типа: одна строка-агрегатор.
+          // Клик по стаку ведёт на ленту дня с фильтром по типу,
+          // одиночный ивент — сразу на карточку (без раскрывающегося списка).
           const groupKey = `${it.type}|${it.time}`;
-          const expanded = !!expandedGroups[groupKey];
           const head = it.items[0];
           const completed = it.items.every((e) => e.status === "completed");
           const isStack = it.items.length > 1;
-          // Для slide заказчик хочет «N шт.» даже при одном ивенте.
           const showCount = isStack || it.type === "slide";
           const groupLabel = showCount
             ? `${eventTypeLabel[it.type]} · ${it.items.length} шт.`
@@ -167,7 +163,7 @@ export default function TodayEvents() {
               <button
                 onClick={() => {
                   if (isStack) {
-                    setExpandedGroups((s) => ({ ...s, [groupKey]: !s[groupKey] }));
+                    nav(`/журнал/день/${selectedDate}?type=${it.type}`);
                   } else {
                     nav(`/журнал/ивент/${head.id}`);
                   }
@@ -197,35 +193,10 @@ export default function TodayEvents() {
                     </div>
                   )}
                 </div>
-                {isStack && (
-                  <span className="grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-brand-muted">
-                    {expanded ? (
-                      <ChevronDown size={14} />
-                    ) : (
-                      <ChevronRight size={14} />
-                    )}
-                  </span>
-                )}
+                <span className="grid h-7 w-7 shrink-0 place-items-center self-center rounded-full text-brand-muted">
+                  <ChevronRight size={14} />
+                </span>
               </button>
-
-              {isStack && expanded && (
-                <div className="space-y-1 border-t border-brand-line/60 bg-brand-mint/15 p-2">
-                  {it.items.map((ev) => (
-                    <button
-                      key={ev.id}
-                      onClick={() => nav(`/журнал/ивент/${ev.id}`)}
-                      className="flex w-full items-center justify-between gap-2 rounded-lg bg-white px-3 py-1.5 text-left text-[12.5px] transition hover:bg-brand-mint/40"
-                    >
-                      <span className="truncate font-semibold text-brand-deep">
-                        {ev.title}
-                      </span>
-                      <span className="shrink-0 text-[10.5px] uppercase tracking-wider text-brand-muted">
-                        {fmtTime(ev.startDate)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}

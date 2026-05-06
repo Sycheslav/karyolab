@@ -218,9 +218,9 @@ export default function ArchivePage() {
                         key={t.id}
                         className={classNames(
                           "h-2 w-2 rounded-full",
-                          tiltColor(t.level)
+                          tiltColor(t.level ?? "calm")
                         )}
-                        title={tiltLevelLabel(t.level)}
+                        title={tiltLevelLabel(t.level ?? "calm")}
                       />
                     ))}
                   </div>
